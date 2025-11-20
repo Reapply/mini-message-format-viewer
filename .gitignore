@@ -43,3 +43,4 @@ bin/
 .DS_Store
 # Project exclude paths
 /.intellijPlatform/
+.claude/
