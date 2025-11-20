@@ -1,0 +1,1 @@
+rootProject.name = "mini-message-format-viewer"

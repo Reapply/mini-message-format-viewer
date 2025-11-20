@@ -1,0 +1,45 @@
+<idea-plugin>
+    <id>me.inspect.mini-message-format-viewer</id>
+    <name>Mini-message-format-viewer</name>
+    <vendor url="https://example.com">Inspect</vendor>
+
+    <description><![CDATA[
+Syntax highlighting for MiniMessage color tags in Java and Kotlin code.
+
+<h3>Features</h3>
+<ul>
+  <li>Real-time preview of MiniMessage color tags in string literals</li>
+  <li>Support for named colors (red, blue, white, etc.)</li>
+  <li>Support for hex colors (#FF5533)</li>
+  <li>Full gradient tag support with smooth color transitions</li>
+  <li>Customizable color mappings through settings panel</li>
+  <li>Add your own custom color names</li>
+</ul>
+
+<h3>Supported Formats</h3>
+<ul>
+  <li>Named colors: <code>&lt;red&gt;text&lt;/red&gt;</code></li>
+  <li>Hex colors: <code>&lt;#FF5533&gt;text&lt;/#FF5533&gt;</code></li>
+  <li>Verbose format: <code>&lt;color:red&gt;text&lt;/color&gt;</code></li>
+  <li>Gradients: <code>&lt;gradient:#A3ADFF:#00FFF4&gt;text&lt;/gradient&gt;</code></li>
+</ul>
+
+<h3>Usage</h3>
+<p>The plugin automatically highlights MiniMessage color tags in Java and Kotlin string literals. Configure custom color mappings in <strong>Settings → Tools → MiniMessage Colors</strong>.</p>
+
+<p>Perfect for Minecraft plugin developers and anyone working with the MiniMessage text formatting library.</p>
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.java</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <annotator language="" implementationClass="me.inspect.minimessageformatviewer.rendering.MiniMessageAnnotator"/>
+        <applicationService serviceImplementation="me.inspect.minimessageformatviewer.settings.MiniMessageSettings"/>
+        <applicationConfigurable
+                parentId="tools"
+                instance="me.inspect.minimessageformatviewer.settings.MiniMessageSettingsConfigurable"
+                id="me.inspect.minimessageformatviewer.settings.MiniMessageSettingsConfigurable"
+                displayName="MiniMessage Colors"/>
+    </extensions>
+</idea-plugin>

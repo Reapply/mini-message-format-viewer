@@ -1,0 +1,18 @@
+<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="mmGradient" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#3BEA62" />
+            <stop offset="50%" stop-color="#3C99CC" />
+            <stop offset="100%" stop-color="#6B57FF" />
+        </linearGradient>
+    </defs>
+
+    <rect width="40" height="40" rx="8" fill="#111218"/>
+
+    <!-- angled brackets -->
+    <path d="M14 12 L8 20 L14 28" stroke="url(#mmGradient)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M26 12 L32 20 L26 28" stroke="url(#mmGradient)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <!-- mini tag slash -->
+    <path d="M18 12 L22 28" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/>
+</svg>
