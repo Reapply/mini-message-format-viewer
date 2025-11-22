@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "me.inspect"
-version = "1.0.0"
+version = "1.0.2"
 
 repositories {
     mavenCentral()
@@ -24,7 +24,6 @@ intellijPlatform {
         ideaVersion {
             sinceBuild = "251"
         }
-        changeNotes = "Initial release"
     }
 }
 

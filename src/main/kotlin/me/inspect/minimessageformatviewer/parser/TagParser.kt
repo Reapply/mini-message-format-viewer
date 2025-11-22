@@ -27,6 +27,9 @@ object TagParser {
             content.startsWith("/") ->
                 parseClosingTag(content.substring(1), length)
 
+            content.lowercase().startsWith("rainbow") ->
+                parseRainbowTag(content, length, isSelfClosing)
+
             content.lowercase().startsWith("gradient") ->
                 parseGradientTag(content, length, isSelfClosing)
 
@@ -36,9 +39,23 @@ object TagParser {
     }
 
     private fun parseClosingTag(content: String, length: Int): Tag {
-        val isGradient = content.lowercase() == "gradient"
+        val lower = content.lowercase()
+        val isGradient = lower == "gradient" || lower == "rainbow"
         val color = if (!isGradient) ColorResolver.resolve(content) else null
         return Tag(length, TagType.CLOSE, color)
+    }
+
+    private fun parseRainbowTag(content: String, length: Int, isSelfClosing: Boolean): Tag? {
+        val colonIndex = content.indexOf(':')
+
+        val (reversed, phase) = if (colonIndex == -1) {
+            false to 0f
+        } else {
+            parseRainbowArgs(content.substring(colonIndex + 1))
+        }
+
+        val type = if (isSelfClosing) TagType.SELF_CLOSING else TagType.OPEN
+        return Tag(length, type, gradientColors = getDefaultRainbow(), gradientPhase = phase, reversed = reversed)
     }
 
     private fun parseGradientTag(content: String, length: Int, isSelfClosing: Boolean): Tag? {
@@ -77,6 +94,24 @@ object TagParser {
         }
 
         return ColorResolver.resolve(lower)
+    }
+
+    private fun parseRainbowArgs(argsString: String): Pair<Boolean, Float> {
+        var reversed = false
+        var phase = 0f
+
+        var argsToParse = argsString.trim()
+
+        if (argsToParse.startsWith("!")) {
+            reversed = true
+            argsToParse = argsToParse.substring(1)
+        }
+
+        argsToParse.toFloatOrNull()?.let {
+            phase = it
+        }
+
+        return reversed to phase
     }
 
     private fun parseGradientArgs(argsString: String): Pair<List<Color>, Float> {

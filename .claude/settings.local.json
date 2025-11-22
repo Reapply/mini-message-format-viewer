@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(.gradlew clean build:*)",
-      "Bash(gradlew.bat clean build:*)"
+      "Bash(gradlew.bat clean build:*)",
+      "Bash(gradlew.bat build:*)",
+      "Bash(.gradlew.bat build)"
     ],
     "deny": [],
     "ask": []

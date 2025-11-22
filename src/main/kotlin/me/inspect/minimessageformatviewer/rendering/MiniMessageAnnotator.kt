@@ -24,7 +24,7 @@ class MiniMessageAnnotator : Annotator {
         val gradientRegions = GradientRegionFinder.find(text, stringStart, stringEnd)
         val colorStack = LinkedList<ColorState>()
 
-        var currentState = ColorState(null, null, 0f)
+        var currentState = ColorState(null, null, 0f, false)
         var segmentStart = stringStart
         var i = stringStart
 
@@ -58,19 +58,19 @@ class MiniMessageAnnotator : Annotator {
             currentState = when (tag.type) {
                 TagType.RESET -> {
                     colorStack.clear()
-                    ColorState(null, null, 0f)
+                    ColorState(null, null, 0f, false)
                 }
 
                 TagType.CLOSE -> {
                     if (colorStack.isNotEmpty()) colorStack.removeLast()
-                    else ColorState(null, null, 0f)
+                    else ColorState(null, null, 0f, false)
                 }
 
                 TagType.OPEN -> {
                     colorStack.addLast(currentState)
                     when {
-                        tag.isGradient -> ColorState(null, tag.gradientColors, tag.gradientPhase)
-                        tag.color != null -> ColorState(tag.color, null, 0f)
+                        tag.isGradient -> ColorState(null, tag.gradientColors, tag.gradientPhase, tag.reversed)
+                        tag.color != null -> ColorState(tag.color, null, 0f, false)
                         else -> currentState
                     }
                 }

@@ -1,6 +1,6 @@
 <idea-plugin>
     <id>me.inspect.mini-message-format-viewer</id>
-    <name>Mini-message-format-viewer</name>
+    <name>MiniMessage-formatter</name>
     <vendor url="https://example.com">Inspect</vendor>
 
     <description><![CDATA[
@@ -22,6 +22,7 @@ Syntax highlighting for MiniMessage color tags in Java and Kotlin code.
   <li>Hex colors: <code>&lt;#FF5533&gt;text&lt;/#FF5533&gt;</code></li>
   <li>Verbose format: <code>&lt;color:red&gt;text&lt;/color&gt;</code></li>
   <li>Gradients: <code>&lt;gradient:#A3ADFF:#00FFF4&gt;text&lt;/gradient&gt;</code></li>
+  <li>Rainbow: <code>&lt;rainbow&gt;text&lt;/rainbow&gt;</code>, <code>&lt;rainbow:!&gt;reversed&lt;/rainbow&gt;</code>, <code>&lt;rainbow:2&gt;text&lt;/rainbow&gt;</code></li>
 </ul>
 
 <h3>Usage</h3>
@@ -29,6 +30,13 @@ Syntax highlighting for MiniMessage color tags in Java and Kotlin code.
 
 <p>Perfect for Minecraft plugin developers and anyone working with the MiniMessage text formatting library.</p>
     ]]></description>
+
+    <change-notes><![CDATA[
+<ul>
+  <li>2025-11-22: Added support for <code>&lt;rainbow&gt;</code> tags with reversed and phase arguments.</li>
+  <li>2025-11-20: Renamed plugin from <code>Mini-message-format-viewer</code> to <code>MiniMessage-formatter</code>.</li>
+</ul>
+    ]]></change-notes>
 
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.java</depends>

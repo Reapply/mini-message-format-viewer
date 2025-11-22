@@ -66,7 +66,8 @@ object TextHighlighter {
                 state.gradientColors!!,
                 positionInGradient,
                 textLength,
-                state.gradientPhase
+                state.gradientPhase,
+                state.reversed
             )
 
             highlightText(holder, TextRange(fileOffset + charIndex, fileOffset + charIndex + 1), color)

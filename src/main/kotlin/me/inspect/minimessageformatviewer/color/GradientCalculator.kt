@@ -5,22 +5,24 @@ import kotlin.math.floor
 
 object GradientCalculator {
 
-    fun getColor(colors: List<Color>, position: Int, length: Int, phase: Float = 0f): Color {
+    fun getColor(colors: List<Color>, position: Int, length: Int, phase: Float = 0f, reversed: Boolean = false): Color {
         if (colors.isEmpty()) return Color.WHITE
         if (colors.size == 1) return colors[0]
         if (length <= 0) return colors[0]
 
+        val effectiveColors = if (reversed) colors.reversed() else colors
+
         var gradientPosition = position.toFloat() / length.toFloat()
         gradientPosition = (gradientPosition + phase).coerceIn(0f, 1f)
 
-        val segmentCount = colors.size - 1
+        val segmentCount = effectiveColors.size - 1
         val scaledPosition = gradientPosition * segmentCount
         val colorIndex = floor(scaledPosition).toInt().coerceIn(0, segmentCount - 1)
-        val nextColorIndex = (colorIndex + 1).coerceIn(0, colors.size - 1)
+        val nextColorIndex = (colorIndex + 1).coerceIn(0, effectiveColors.size - 1)
 
         val localPosition = scaledPosition - colorIndex
 
-        return interpolate(colors[colorIndex], colors[nextColorIndex], localPosition)
+        return interpolate(effectiveColors[colorIndex], effectiveColors[nextColorIndex], localPosition)
     }
 
     private fun interpolate(color1: Color, color2: Color, factor: Float): Color {

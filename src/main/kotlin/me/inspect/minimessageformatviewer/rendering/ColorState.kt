@@ -5,5 +5,6 @@ import java.awt.Color
 data class ColorState(
     val color: Color?,
     val gradientColors: List<Color>?,
-    val gradientPhase: Float
+    val gradientPhase: Float,
+    val reversed: Boolean = false
 )

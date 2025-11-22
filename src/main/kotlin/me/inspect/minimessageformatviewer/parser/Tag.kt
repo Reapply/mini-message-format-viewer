@@ -7,7 +7,8 @@ data class Tag(
     val type: TagType,
     val color: Color? = null,
     val gradientColors: List<Color>? = null,
-    val gradientPhase: Float = 0f
+    val gradientPhase: Float = 0f,
+    val reversed: Boolean = false
 ) {
     val isGradient: Boolean
         get() = !gradientColors.isNullOrEmpty()
