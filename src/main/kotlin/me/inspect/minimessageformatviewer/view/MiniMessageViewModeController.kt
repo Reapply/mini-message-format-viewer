@@ -19,10 +19,14 @@ import com.intellij.openapi.util.Key
 import com.intellij.util.Alarm
 import me.inspect.minimessageformatviewer.settings.MiniMessageSettings
 import java.awt.Cursor
+import java.awt.event.KeyAdapter
+import java.awt.event.KeyEvent
+import java.awt.event.KeyListener
 
 class MiniMessageViewModeController : Disposable {
     private val refreshAlarm = Alarm(Alarm.ThreadToUse.SWING_THREAD, this)
     private val viewerStateByEditor = LinkedHashMap<EditorEx, Boolean>()
+    private val keyListenerByEditor = LinkedHashMap<Editor, KeyListener>()
 
     private val documentListener = object : DocumentListener {
         override fun documentChanged(event: DocumentEvent) {
@@ -45,6 +49,7 @@ class MiniMessageViewModeController : Disposable {
         runOnEdt {
             EditorFactory.getInstance().eventMulticaster.addDocumentListener(documentListener, this)
             EditorFactory.getInstance().eventMulticaster.addEditorMouseMotionListener(mouseMotionListener, this)
+            installAltEnterListenersForAllEditors()
 
             if (MiniMessageSettings.getInstance().viewModeEnabled) {
                 refreshAllEditors()
@@ -111,10 +116,43 @@ class MiniMessageViewModeController : Disposable {
     }
 
     private fun refreshAllEditors() {
+        installAltEnterListenersForAllEditors()
         EditorFactory.getInstance().allEditors
             .asSequence()
             .filter { !it.isDisposed }
             .forEach(::refreshEditorFolding)
+    }
+
+    private fun installAltEnterListenersForAllEditors() {
+        EditorFactory.getInstance().allEditors
+            .asSequence()
+            .filter { !it.isDisposed }
+            .forEach(::ensureAltEnterListenerInstalled)
+
+        keyListenerByEditor.keys
+            .filter { it.isDisposed }
+            .toList()
+            .forEach(keyListenerByEditor::remove)
+    }
+
+    private fun ensureAltEnterListenerInstalled(editor: Editor) {
+        if (keyListenerByEditor.containsKey(editor)) return
+
+        val listener = object : KeyAdapter() {
+            override fun keyPressed(event: KeyEvent) {
+                if (!MiniMessageSettings.getInstance().viewModeEnabled) return
+                if (event.keyCode != KeyEvent.VK_ENTER || !event.isAltDown) return
+
+                val offset = editor.caretModel.offset
+                if (!isMiniMessageLiteralAtOffset(editor.document.charsSequence, offset)) return
+
+                event.consume()
+                toggleViewMode(editor)
+            }
+        }
+
+        editor.contentComponent.addKeyListener(listener)
+        keyListenerByEditor[editor] = listener
     }
 
     private fun restartHighlighting() {
@@ -232,6 +270,12 @@ class MiniMessageViewModeController : Disposable {
     override fun dispose() {
         restoreAllViewerStates()
         resetAllEditorCursors()
+        keyListenerByEditor.forEach { (editor, listener) ->
+            if (!editor.isDisposed) {
+                editor.contentComponent.removeKeyListener(listener)
+            }
+        }
+        keyListenerByEditor.clear()
     }
 
     companion object {
