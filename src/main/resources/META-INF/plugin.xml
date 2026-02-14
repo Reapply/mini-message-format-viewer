@@ -40,7 +40,6 @@ Syntax highlighting for MiniMessage color tags in Java and Kotlin code.
     <extensions defaultExtensionNs="com.intellij">
         <annotator language="" implementationClass="me.inspect.minimessageformatviewer.rendering.MiniMessageAnnotator"/>
         <applicationService serviceImplementation="me.inspect.minimessageformatviewer.settings.MiniMessageSettings"/>
-        <applicationService serviceImplementation="me.inspect.minimessageformatviewer.view.MiniMessageViewModeController"/>
         <applicationConfigurable
                 parentId="tools"
                 instance="me.inspect.minimessageformatviewer.settings.MiniMessageSettingsConfigurable"

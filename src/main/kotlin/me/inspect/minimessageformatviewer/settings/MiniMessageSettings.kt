@@ -15,7 +15,6 @@ class MiniMessageSettings : PersistentStateComponent<MiniMessageSettings> {
 
     var customColors: MutableMap<String, String> = mutableMapOf()
     var renderMode: String = RenderMode.BUILT_IN.name
-    var viewModeEnabled: Boolean = false
 
     override fun getState() = this
 
