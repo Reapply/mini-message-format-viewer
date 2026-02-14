@@ -36,6 +36,12 @@ object TagParser {
             isUnderlineTag(content) ->
                 parseUnderlineTag(length, isSelfClosing)
 
+            isStrikethroughTag(content) ->
+                parseStrikethroughTag(length, isSelfClosing)
+
+            isObfuscatedTag(content) ->
+                parseObfuscatedTag(length, isSelfClosing)
+
             else ->
                 parseColorTag(content, length, isSelfClosing)
         }
@@ -85,8 +91,26 @@ object TagParser {
         return Tag(length, type, underlined = true)
     }
 
+    private fun parseStrikethroughTag(length: Int, isSelfClosing: Boolean): Tag {
+        val type = if (isSelfClosing) TagType.SELF_CLOSING else TagType.OPEN
+        return Tag(length, type, strikethrough = true)
+    }
+
+    private fun parseObfuscatedTag(length: Int, isSelfClosing: Boolean): Tag {
+        val type = if (isSelfClosing) TagType.SELF_CLOSING else TagType.OPEN
+        return Tag(length, type, obfuscated = true)
+    }
+
     private fun isUnderlineTag(content: String): Boolean {
         return content.trim().lowercase() in setOf("underlined", "underline", "u")
+    }
+
+    private fun isStrikethroughTag(content: String): Boolean {
+        return content.trim().lowercase() in setOf("strikethrough", "strike", "st", "s")
+    }
+
+    private fun isObfuscatedTag(content: String): Boolean {
+        return content.trim().lowercase() in setOf("obfuscated", "obf", "magic")
     }
 
     private fun resolveColorFromContent(content: String): Color? {

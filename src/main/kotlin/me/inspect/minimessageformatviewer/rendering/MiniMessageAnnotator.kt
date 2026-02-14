@@ -37,8 +37,8 @@ class MiniMessageAnnotator : Annotator {
         val renderOutput = renderModel.render(sourceContent, settings.customColors)
         val contentStartOffset = fileOffset + stringStart
 
-        if (FORCE_UNDERLINE_ALL_FOR_TEST) {
-            underlineAllCharacters(holder, contentStartOffset, sourceContent.length)
+        if (hasForcedGlobalEffect()) {
+            applyForcedEffectToAllCharacters(holder, contentStartOffset, sourceContent.length)
         }
 
         renderOutput.tagHighlights.forEach { highlight ->
@@ -73,10 +73,20 @@ class MiniMessageAnnotator : Annotator {
     ) {
         val fontType = buildFontType(styledCharacter.bold, styledCharacter.italic)
         val color = styledCharacter.color?.let(ReadableColorUtil::adjustForEditor)
-        val shouldUnderline = styledCharacter.underlined || FORCE_UNDERLINE_ALL_FOR_TEST
-        val effectColor = if (shouldUnderline) color ?: DEFAULT_UNDERLINE_COLOR else null
-        val effectType = if (shouldUnderline) EffectType.LINE_UNDERSCORE else null
-        if (color == null && fontType == Font.PLAIN && !shouldUnderline) return
+        val shouldUnderline = styledCharacter.underlined || TestStyleOverrides.FORCE_UNDERLINE_ALL
+        val shouldStrikethrough = styledCharacter.strikethrough || TestStyleOverrides.FORCE_STRIKETHROUGH_ALL
+        val shouldObfuscated = styledCharacter.obfuscated || TestStyleOverrides.FORCE_OBFUSCATED_ALL
+
+        val effectType = selectEffectType(shouldUnderline, shouldStrikethrough, shouldObfuscated)
+        val effectColor = when (effectType) {
+            EffectType.LINE_UNDERSCORE -> color ?: DEFAULT_UNDERLINE_COLOR
+            EffectType.STRIKEOUT -> color ?: DEFAULT_STRIKE_COLOR
+            EffectType.BOLD_DOTTED_LINE -> color ?: DEFAULT_OBFUSCATED_COLOR
+            null -> null
+            else -> null
+        }
+
+        if (color == null && fontType == Font.PLAIN && effectType == null) return
 
         holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
             .range(TextRange(contentStartOffset + styledCharacter.sourceIndex, contentStartOffset + styledCharacter.sourceIndex + 1))
@@ -84,7 +94,20 @@ class MiniMessageAnnotator : Annotator {
             .create()
     }
 
-    private fun underlineAllCharacters(holder: AnnotationHolder, contentStartOffset: Int, length: Int) {
+    private fun applyForcedEffectToAllCharacters(holder: AnnotationHolder, contentStartOffset: Int, length: Int) {
+        val effectType = selectEffectType(
+            underline = TestStyleOverrides.FORCE_UNDERLINE_ALL,
+            strikethrough = TestStyleOverrides.FORCE_STRIKETHROUGH_ALL,
+            obfuscated = TestStyleOverrides.FORCE_OBFUSCATED_ALL
+        ) ?: return
+
+        val effectColor = when (effectType) {
+            EffectType.LINE_UNDERSCORE -> DEFAULT_UNDERLINE_COLOR
+            EffectType.STRIKEOUT -> DEFAULT_STRIKE_COLOR
+            EffectType.BOLD_DOTTED_LINE -> DEFAULT_OBFUSCATED_COLOR
+            else -> DEFAULT_UNDERLINE_COLOR
+        }
+
         for (index in 0 until length) {
             holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
                 .range(TextRange(contentStartOffset + index, contentStartOffset + index + 1))
@@ -92,12 +115,28 @@ class MiniMessageAnnotator : Annotator {
                     TextAttributes(
                         null,
                         null,
-                        DEFAULT_UNDERLINE_COLOR,
-                        EffectType.LINE_UNDERSCORE,
+                        effectColor,
+                        effectType,
                         Font.PLAIN
                     )
                 )
                 .create()
+        }
+    }
+
+    private fun hasForcedGlobalEffect(): Boolean {
+        return TestStyleOverrides.FORCE_UNDERLINE_ALL ||
+                TestStyleOverrides.FORCE_STRIKETHROUGH_ALL ||
+                TestStyleOverrides.FORCE_OBFUSCATED_ALL
+    }
+
+    private fun selectEffectType(underline: Boolean, strikethrough: Boolean, obfuscated: Boolean): EffectType? {
+        // IntelliJ TextAttributes supports a single effect at a time.
+        return when {
+            obfuscated -> EffectType.BOLD_DOTTED_LINE
+            strikethrough -> EffectType.STRIKEOUT
+            underline -> EffectType.LINE_UNDERSCORE
+            else -> null
         }
     }
 
@@ -132,6 +171,7 @@ class MiniMessageAnnotator : Annotator {
     companion object {
         private val DEFAULT_TAG_COLOR = Color(0x6A, 0x6A, 0x6A)
         private val DEFAULT_UNDERLINE_COLOR = Color(0x5E, 0x5E, 0x5E)
-        private const val FORCE_UNDERLINE_ALL_FOR_TEST = true
+        private val DEFAULT_STRIKE_COLOR = Color(0x7A, 0x7A, 0x7A)
+        private val DEFAULT_OBFUSCATED_COLOR = Color(0x5D, 0x6E, 0x8A)
     }
 }

@@ -16,7 +16,7 @@ object BuiltInRenderModel : MessageRenderModel {
         val styledCharacters = mutableListOf<StyledCharacter>()
         val tagHighlights = mutableListOf<TagHighlight>()
 
-        var currentState = ColorState(null, null, 0f, false, false)
+        var currentState = ColorState(null, null, 0f, false, false, false, false)
         var segmentStart = 0
         var i = 0
 
@@ -42,12 +42,12 @@ object BuiltInRenderModel : MessageRenderModel {
             currentState = when (tag.type) {
                 TagType.RESET -> {
                     colorStack.clear()
-                    ColorState(null, null, 0f, false, false)
+                    ColorState(null, null, 0f, false, false, false, false)
                 }
 
                 TagType.CLOSE -> {
                     if (colorStack.isNotEmpty()) colorStack.removeLast()
-                    else ColorState(null, null, 0f, false, false)
+                    else ColorState(null, null, 0f, false, false, false, false)
                 }
 
                 TagType.OPEN -> {
@@ -58,7 +58,9 @@ object BuiltInRenderModel : MessageRenderModel {
                             tag.gradientColors,
                             tag.gradientPhase,
                             tag.reversed,
-                            currentState.underlined
+                            currentState.underlined,
+                            currentState.strikethrough,
+                            currentState.obfuscated
                         )
 
                         tag.color != null -> ColorState(
@@ -66,10 +68,14 @@ object BuiltInRenderModel : MessageRenderModel {
                             null,
                             0f,
                             false,
-                            currentState.underlined
+                            currentState.underlined,
+                            currentState.strikethrough,
+                            currentState.obfuscated
                         )
 
                         tag.underlined -> currentState.copy(underlined = true)
+                        tag.strikethrough -> currentState.copy(strikethrough = true)
+                        tag.obfuscated -> currentState.copy(obfuscated = true)
                         else -> currentState
                     }
                 }
@@ -107,7 +113,7 @@ object BuiltInRenderModel : MessageRenderModel {
         }
 
         for (index in start until end) {
-            if (state.color == null && !state.underlined) {
+            if (state.color == null && !state.underlined && !state.strikethrough && !state.obfuscated) {
                 continue
             }
             out.add(
@@ -116,7 +122,9 @@ object BuiltInRenderModel : MessageRenderModel {
                     color = state.color,
                     bold = false,
                     italic = false,
-                    underlined = state.underlined
+                    underlined = state.underlined,
+                    strikethrough = state.strikethrough,
+                    obfuscated = state.obfuscated
                 )
             )
         }
@@ -148,7 +156,9 @@ object BuiltInRenderModel : MessageRenderModel {
                     color = color,
                     bold = false,
                     italic = false,
-                    underlined = state.underlined
+                    underlined = state.underlined,
+                    strikethrough = state.strikethrough,
+                    obfuscated = state.obfuscated
                 )
             )
         }

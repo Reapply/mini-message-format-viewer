@@ -11,7 +11,14 @@ object RenderOutputMapper {
         val mapped = ArrayList<StyledCharacter>(count)
         for (index in 0 until count) {
             val style = styles[index]
-            if (style.color == null && !style.bold && !style.italic && !style.underlined) {
+            if (
+                style.color == null &&
+                !style.bold &&
+                !style.italic &&
+                !style.underlined &&
+                !style.strikethrough &&
+                !style.obfuscated
+            ) {
                 continue
             }
             mapped.add(
@@ -20,7 +27,9 @@ object RenderOutputMapper {
                     color = style.color,
                     bold = style.bold,
                     italic = style.italic,
-                    underlined = style.underlined
+                    underlined = style.underlined,
+                    strikethrough = style.strikethrough,
+                    obfuscated = style.obfuscated
                 )
             )
         }

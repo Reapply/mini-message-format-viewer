@@ -7,7 +7,9 @@ data class StyledCharacter(
     val color: Color?,
     val bold: Boolean,
     val italic: Boolean,
-    val underlined: Boolean
+    val underlined: Boolean,
+    val strikethrough: Boolean,
+    val obfuscated: Boolean
 )
 
 data class TagHighlight(

@@ -9,7 +9,9 @@ data class Tag(
     val gradientColors: List<Color>? = null,
     val gradientPhase: Float = 0f,
     val reversed: Boolean = false,
-    val underlined: Boolean = false
+    val underlined: Boolean = false,
+    val strikethrough: Boolean = false,
+    val obfuscated: Boolean = false
 ) {
     val isGradient: Boolean
         get() = !gradientColors.isNullOrEmpty()

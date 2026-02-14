@@ -6,7 +6,9 @@ data class LegacyStyledCharacter(
     val color: Color?,
     val bold: Boolean,
     val italic: Boolean,
-    val underlined: Boolean
+    val underlined: Boolean,
+    val strikethrough: Boolean,
+    val obfuscated: Boolean
 )
 
 data class LegacySourceMapping(
@@ -123,7 +125,9 @@ object LegacyTextParsing {
             val color: Color? = null,
             val bold: Boolean = false,
             val italic: Boolean = false,
-            val underlined: Boolean = false
+            val underlined: Boolean = false,
+            val strikethrough: Boolean = false,
+            val obfuscated: Boolean = false
         )
 
         var style = StyleState()
@@ -140,7 +144,14 @@ object LegacyTextParsing {
                     && serializedLegacy.substring(i + 2, i + 8).all { it.isHexDigit() }
                 ) {
                     val color = parseHex(serializedLegacy.substring(i + 2, i + 8))
-                    style = StyleState(color = color, bold = false, italic = false, underlined = false)
+                    style = StyleState(
+                        color = color,
+                        bold = false,
+                        italic = false,
+                        underlined = false,
+                        strikethrough = false,
+                        obfuscated = false
+                    )
                     i += 8
                     continue
                 }
@@ -148,7 +159,14 @@ object LegacyTextParsing {
                 val verboseHexLength = verboseHexLength(serializedLegacy, i, '§')
                 if (verboseHexLength > 0) {
                     val color = parseVerboseHexColor(serializedLegacy, i)
-                    style = StyleState(color = color, bold = false, italic = false, underlined = false)
+                    style = StyleState(
+                        color = color,
+                        bold = false,
+                        italic = false,
+                        underlined = false,
+                        strikethrough = false,
+                        obfuscated = false
+                    )
                     i += verboseHexLength
                     continue
                 }
@@ -159,7 +177,9 @@ object LegacyTextParsing {
                             color = ColorParsing.fromLegacyCode(next),
                             bold = false,
                             italic = false,
-                            underlined = false
+                            underlined = false,
+                            strikethrough = false,
+                            obfuscated = false
                         )
                         i += 2
                         continue
@@ -183,6 +203,18 @@ object LegacyTextParsing {
                         continue
                     }
 
+                    next == 'm' -> {
+                        style = style.copy(strikethrough = true)
+                        i += 2
+                        continue
+                    }
+
+                    next == 'k' -> {
+                        style = style.copy(obfuscated = true)
+                        i += 2
+                        continue
+                    }
+
                     next == 'r' -> {
                         style = StyleState()
                         i += 2
@@ -201,7 +233,9 @@ object LegacyTextParsing {
                     color = style.color,
                     bold = style.bold,
                     italic = style.italic,
-                    underlined = style.underlined
+                    underlined = style.underlined,
+                    strikethrough = style.strikethrough,
+                    obfuscated = style.obfuscated
                 )
             )
             i++
