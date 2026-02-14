@@ -12,12 +12,15 @@ import me.inspect.minimessageformatviewer.rendering.model.RenderMode
 import me.inspect.minimessageformatviewer.rendering.model.StyledCharacter
 import me.inspect.minimessageformatviewer.rendering.model.TagHighlight
 import me.inspect.minimessageformatviewer.settings.MiniMessageSettings
+import me.inspect.minimessageformatviewer.view.MiniMessageViewModeController
 import java.awt.Color
 import java.awt.Font
 
 class MiniMessageAnnotator : Annotator {
 
     override fun annotate(element: PsiElement, holder: AnnotationHolder) {
+        MiniMessageViewModeController.ensureInitialized()
+
         val text = element.text ?: return
         if (!isStringLiteral(text)) return
 
