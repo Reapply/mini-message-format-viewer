@@ -77,49 +77,61 @@ class MiniMessageAnnotator : Annotator {
         val shouldStrikethrough = styledCharacter.strikethrough || TestStyleOverrides.FORCE_STRIKETHROUGH_ALL
         val shouldObfuscated = styledCharacter.obfuscated || TestStyleOverrides.FORCE_OBFUSCATED_ALL
 
-        val effectType = selectEffectType(shouldUnderline, shouldStrikethrough, shouldObfuscated)
-        val effectColor = when (effectType) {
-            EffectType.LINE_UNDERSCORE -> color ?: DEFAULT_UNDERLINE_COLOR
-            EffectType.STRIKEOUT -> color ?: DEFAULT_STRIKE_COLOR
-            EffectType.BOLD_DOTTED_LINE -> color ?: DEFAULT_OBFUSCATED_COLOR
-            null -> null
-            else -> null
-        }
+        val effects = collectEffects(shouldUnderline, shouldStrikethrough, shouldObfuscated, color)
+        val primaryEffect = effects.entries.firstOrNull()
 
-        if (color == null && fontType == Font.PLAIN && effectType == null) return
+        if (color == null && fontType == Font.PLAIN && primaryEffect == null) return
+
+        val textAttributes = TextAttributes(
+            color,
+            null,
+            primaryEffect?.value,
+            primaryEffect?.key,
+            fontType
+        )
+
+        if (effects.size > 1) {
+            val additional = LinkedHashMap<EffectType, Color>()
+            effects.entries.drop(1).forEach { (type, effectColor) ->
+                additional[type] = effectColor
+            }
+            textAttributes.setAdditionalEffects(additional)
+        }
 
         holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
             .range(TextRange(contentStartOffset + styledCharacter.sourceIndex, contentStartOffset + styledCharacter.sourceIndex + 1))
-            .enforcedTextAttributes(TextAttributes(color, null, effectColor, effectType, fontType))
+            .enforcedTextAttributes(textAttributes)
             .create()
     }
 
     private fun applyForcedEffectToAllCharacters(holder: AnnotationHolder, contentStartOffset: Int, length: Int) {
-        val effectType = selectEffectType(
+        val forcedEffects = collectEffects(
             underline = TestStyleOverrides.FORCE_UNDERLINE_ALL,
             strikethrough = TestStyleOverrides.FORCE_STRIKETHROUGH_ALL,
-            obfuscated = TestStyleOverrides.FORCE_OBFUSCATED_ALL
-        ) ?: return
-
-        val effectColor = when (effectType) {
-            EffectType.LINE_UNDERSCORE -> DEFAULT_UNDERLINE_COLOR
-            EffectType.STRIKEOUT -> DEFAULT_STRIKE_COLOR
-            EffectType.BOLD_DOTTED_LINE -> DEFAULT_OBFUSCATED_COLOR
-            else -> DEFAULT_UNDERLINE_COLOR
-        }
+            obfuscated = TestStyleOverrides.FORCE_OBFUSCATED_ALL,
+            baseColor = null
+        )
+        val primaryEffect = forcedEffects.entries.firstOrNull() ?: return
 
         for (index in 0 until length) {
+            val textAttributes = TextAttributes(
+                null,
+                null,
+                primaryEffect.value,
+                primaryEffect.key,
+                Font.PLAIN
+            )
+            if (forcedEffects.size > 1) {
+                val additional = LinkedHashMap<EffectType, Color>()
+                forcedEffects.entries.drop(1).forEach { (type, effectColor) ->
+                    additional[type] = effectColor
+                }
+                textAttributes.setAdditionalEffects(additional)
+            }
+
             holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
                 .range(TextRange(contentStartOffset + index, contentStartOffset + index + 1))
-                .enforcedTextAttributes(
-                    TextAttributes(
-                        null,
-                        null,
-                        effectColor,
-                        effectType,
-                        Font.PLAIN
-                    )
-                )
+                .enforcedTextAttributes(textAttributes)
                 .create()
         }
     }
@@ -130,14 +142,23 @@ class MiniMessageAnnotator : Annotator {
                 TestStyleOverrides.FORCE_OBFUSCATED_ALL
     }
 
-    private fun selectEffectType(underline: Boolean, strikethrough: Boolean, obfuscated: Boolean): EffectType? {
-        // IntelliJ TextAttributes supports a single effect at a time.
-        return when {
-            obfuscated -> EffectType.BOLD_DOTTED_LINE
-            strikethrough -> EffectType.STRIKEOUT
-            underline -> EffectType.LINE_UNDERSCORE
-            else -> null
+    private fun collectEffects(
+        underline: Boolean,
+        strikethrough: Boolean,
+        obfuscated: Boolean,
+        baseColor: Color?
+    ): LinkedHashMap<EffectType, Color> {
+        val effects = LinkedHashMap<EffectType, Color>(3)
+        if (underline) {
+            effects[EffectType.LINE_UNDERSCORE] = baseColor ?: DEFAULT_UNDERLINE_COLOR
         }
+        if (strikethrough) {
+            effects[EffectType.STRIKEOUT] = baseColor ?: DEFAULT_STRIKE_COLOR
+        }
+        if (obfuscated) {
+            effects[EffectType.BOLD_DOTTED_LINE] = baseColor ?: DEFAULT_OBFUSCATED_COLOR
+        }
+        return effects
     }
 
     private fun buildFontType(bold: Boolean, italic: Boolean): Int {
