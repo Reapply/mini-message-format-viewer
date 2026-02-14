@@ -4,16 +4,9 @@ import com.intellij.codeInsight.intention.IntentionAction
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiFile
-import me.inspect.minimessageformatviewer.settings.MiniMessageSettings
 
 class ToggleMiniMessageViewModeIntention : IntentionAction {
-    override fun getText(): String {
-        return if (MiniMessageSettings.getInstance().viewModeEnabled) {
-            "Switch MiniMessage to Edit mode"
-        } else {
-            "Switch MiniMessage to View mode"
-        }
-    }
+    override fun getText(): String = "Toggle MiniMessage View/Edit mode"
 
     override fun getFamilyName(): String = "MiniMessage"
 

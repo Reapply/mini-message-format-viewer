@@ -59,7 +59,8 @@ class MiniMessageViewModeController : Disposable {
 
     fun toggleViewMode(editor: Editor?): Boolean {
         val settings = MiniMessageSettings.getInstance()
-        settings.viewModeEnabled = !settings.viewModeEnabled
+        val actualViewMode = resolveCurrentViewMode(editor, settings.viewModeEnabled)
+        settings.viewModeEnabled = !actualViewMode
         val enabled = settings.viewModeEnabled
 
         refreshAllEditors()
@@ -76,6 +77,12 @@ class MiniMessageViewModeController : Disposable {
         }
 
         return enabled
+    }
+
+    private fun resolveCurrentViewMode(editor: Editor?, fallback: Boolean): Boolean {
+        val editorEx = editor as? EditorEx ?: return fallback
+        if (editorEx.isDisposed) return fallback
+        return viewerStateByEditor.containsKey(editorEx)
     }
 
     private fun scheduleRefreshForDocument(document: Document) {
