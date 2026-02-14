@@ -156,7 +156,7 @@ class MiniMessageAnnotator : Annotator {
             effects[EffectType.STRIKEOUT] = baseColor ?: DEFAULT_STRIKE_COLOR
         }
         if (obfuscated) {
-            effects[EffectType.BOLD_DOTTED_LINE] = baseColor ?: DEFAULT_OBFUSCATED_COLOR
+            effects[EffectType.BOXED] = baseColor ?: DEFAULT_OBFUSCATED_COLOR
         }
         return effects
     }
