@@ -23,10 +23,12 @@ class MiniMessageViewModeController : Disposable {
     }
 
     init {
-        EditorFactory.getInstance().eventMulticaster.addDocumentListener(documentListener, this)
+        runOnEdt {
+            EditorFactory.getInstance().eventMulticaster.addDocumentListener(documentListener, this)
 
-        if (MiniMessageSettings.getInstance().viewModeEnabled) {
-            refreshAllEditors()
+            if (MiniMessageSettings.getInstance().viewModeEnabled) {
+                refreshAllEditors()
+            }
         }
     }
 
@@ -118,7 +120,7 @@ class MiniMessageViewModeController : Disposable {
         private val VIEW_MODE_TAG_FOLD_KEY = Key.create<Boolean>("mini.message.viewer.view.mode.tag.fold")
 
         fun ensureInitialized() {
-            getInstance()
+            runOnEdt { getInstance() }
         }
 
         fun getInstance(): MiniMessageViewModeController {
@@ -136,6 +138,15 @@ class MiniMessageViewModeController : Disposable {
 
                 val content = text.subSequence(contentStart, contentEndExclusive)
                 TAG_REGEX.containsMatchIn(content)
+            }
+        }
+
+        private inline fun runOnEdt(crossinline action: () -> Unit) {
+            val app = ApplicationManager.getApplication()
+            if (app.isDispatchThread) {
+                action()
+            } else {
+                app.invokeLater { action() }
             }
         }
     }
