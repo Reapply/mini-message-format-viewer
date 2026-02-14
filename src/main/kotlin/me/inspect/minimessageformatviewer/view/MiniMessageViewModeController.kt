@@ -8,7 +8,7 @@ import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.FoldRegion
-import com.intellij.openapi.editor.RangeMarker
+import com.intellij.openapi.editor.ex.EditorEx
 import com.intellij.openapi.editor.event.EditorMouseEvent
 import com.intellij.openapi.editor.event.EditorMouseEventArea
 import com.intellij.openapi.editor.event.EditorMouseMotionListener
@@ -22,7 +22,7 @@ import java.awt.Cursor
 
 class MiniMessageViewModeController : Disposable {
     private val refreshAlarm = Alarm(Alarm.ThreadToUse.SWING_THREAD, this)
-    private val guardedBlocksByDocument = LinkedHashMap<Document, MutableList<RangeMarker>>()
+    private val viewerStateByEditor = LinkedHashMap<EditorEx, Boolean>()
 
     private val documentListener = object : DocumentListener {
         override fun documentChanged(event: DocumentEvent) {
@@ -59,7 +59,7 @@ class MiniMessageViewModeController : Disposable {
 
         refreshAllEditors()
         if (!enabled) {
-            clearAllGuardedBlocks()
+            restoreAllViewerStates()
             resetAllEditorCursors()
         }
         restartHighlighting()
@@ -94,7 +94,7 @@ class MiniMessageViewModeController : Disposable {
         val cursorType = when {
             !MiniMessageSettings.getInstance().viewModeEnabled -> Cursor.TEXT_CURSOR
             event.area != EditorMouseEventArea.EDITING_AREA -> Cursor.TEXT_CURSOR
-            isOffsetGuarded(editor, event) -> Cursor.DEFAULT_CURSOR
+            isOffsetInsideMiniMessageLiteral(editor, event) -> Cursor.DEFAULT_CURSOR
             else -> Cursor.TEXT_CURSOR
         }
 
@@ -104,13 +104,10 @@ class MiniMessageViewModeController : Disposable {
         }
     }
 
-    private fun isOffsetGuarded(editor: Editor, event: EditorMouseEvent): Boolean {
+    private fun isOffsetInsideMiniMessageLiteral(editor: Editor, event: EditorMouseEvent): Boolean {
         val point = event.mouseEvent.point
         val offset = editor.logicalPositionToOffset(editor.xyToLogicalPosition(point))
-        val guarded = guardedBlocksByDocument[editor.document].orEmpty()
-        return guarded.any { marker ->
-            marker.isValid && offset in marker.startOffset until marker.endOffset
-        }
+        return isMiniMessageLiteralAtOffset(editor.document.charsSequence, offset)
     }
 
     private fun refreshAllEditors() {
@@ -132,7 +129,7 @@ class MiniMessageViewModeController : Disposable {
         val viewModeEnabled = MiniMessageSettings.getInstance().viewModeEnabled
         val text = document.charsSequence
 
-        refreshDocumentGuards(document, text, viewModeEnabled)
+        refreshEditorViewerState(editor, text, viewModeEnabled)
 
         foldingModel.runBatchFoldingOperation {
             foldingModel.allFoldRegions
@@ -153,44 +150,37 @@ class MiniMessageViewModeController : Disposable {
         }
     }
 
-    private fun refreshDocumentGuards(document: Document, text: CharSequence, viewModeEnabled: Boolean) {
-        ApplicationManager.getApplication().runWriteAction {
-            removeDocumentGuardBlocks(document)
+    private fun refreshEditorViewerState(editor: Editor, text: CharSequence, viewModeEnabled: Boolean) {
+        val editorEx = editor as? EditorEx ?: return
+        if (editorEx.isDisposed) return
 
-            if (!viewModeEnabled) return@runWriteAction
+        val hasMiniMessageContent = containsMiniMessageLiteral(text)
+        val shouldBeViewer = viewModeEnabled && hasMiniMessageContent
+        val originalViewerState = viewerStateByEditor[editorEx]
 
-            val ranges = collectMiniMessageContentRanges(text)
-            if (ranges.isEmpty()) return@runWriteAction
-
-            val guardedBlocks = mutableListOf<RangeMarker>()
-            ranges.forEach { (start, endExclusive) ->
-                if (endExclusive <= start) return@forEach
-                val marker = document.createGuardedBlock(start, endExclusive)
-                marker.putUserData(VIEW_MODE_CONTENT_GUARD_KEY, true)
-                guardedBlocks.add(marker)
+        if (shouldBeViewer) {
+            if (originalViewerState == null) {
+                viewerStateByEditor[editorEx] = editorEx.isViewer
             }
+            editorEx.isViewer = true
+            return
+        }
 
-            if (guardedBlocks.isNotEmpty()) {
-                guardedBlocksByDocument[document] = guardedBlocks
-            }
+        if (originalViewerState != null) {
+            editorEx.isViewer = originalViewerState
+            viewerStateByEditor.remove(editorEx)
         }
     }
 
-    private fun collectMiniMessageContentRanges(text: CharSequence): List<Pair<Int, Int>> {
-        val ranges = mutableListOf<Pair<Int, Int>>()
-
-        STRING_LITERAL_REGEX.findAll(text).forEach { literalMatch ->
-            val contentStart = literalMatch.range.first + 1
-            val contentEndExclusive = literalMatch.range.last
-            if (contentStart >= contentEndExclusive) return@forEach
+    private fun containsMiniMessageLiteral(text: CharSequence): Boolean {
+        return STRING_LITERAL_REGEX.findAll(text).any { literal ->
+            val contentStart = literal.range.first + 1
+            val contentEndExclusive = literal.range.last
+            if (contentStart >= contentEndExclusive) return@any false
 
             val content = text.subSequence(contentStart, contentEndExclusive)
-            if (TAG_REGEX.containsMatchIn(content)) {
-                ranges.add(contentStart to contentEndExclusive)
-            }
+            TAG_REGEX.containsMatchIn(content)
         }
-
-        return ranges
     }
 
     private fun collectTagRanges(text: CharSequence): List<Pair<Int, Int>> {
@@ -224,18 +214,12 @@ class MiniMessageViewModeController : Disposable {
         return TAG_REGEX.matches(foldedText)
     }
 
-    private fun removeDocumentGuardBlocks(document: Document) {
-        val blocks = guardedBlocksByDocument.remove(document).orEmpty()
-        blocks.forEach { marker ->
-            if (!marker.isValid) return@forEach
-            runCatching { document.removeGuardedBlock(marker) }
+    private fun restoreAllViewerStates() {
+        viewerStateByEditor.entries.toList().forEach { (editor, originalViewerState) ->
+            if (editor.isDisposed) return@forEach
+            editor.isViewer = originalViewerState
         }
-    }
-
-    private fun clearAllGuardedBlocks() {
-        ApplicationManager.getApplication().runWriteAction {
-            guardedBlocksByDocument.keys.toList().forEach(::removeDocumentGuardBlocks)
-        }
+        viewerStateByEditor.clear()
     }
 
     private fun resetAllEditorCursors() {
@@ -246,7 +230,7 @@ class MiniMessageViewModeController : Disposable {
     }
 
     override fun dispose() {
-        clearAllGuardedBlocks()
+        restoreAllViewerStates()
         resetAllEditorCursors()
     }
 
@@ -254,7 +238,6 @@ class MiniMessageViewModeController : Disposable {
         private val STRING_LITERAL_REGEX = Regex("\"(?:\\\\.|[^\"\\\\])*\"|'(?:\\\\.|[^'\\\\])*'")
         private val TAG_REGEX = Regex("<[^<>\\n]+>")
         private val VIEW_MODE_TAG_FOLD_KEY = Key.create<Boolean>("mini.message.viewer.view.mode.tag.fold")
-        private val VIEW_MODE_CONTENT_GUARD_KEY = Key.create<Boolean>("mini.message.viewer.view.mode.content.guard")
 
         fun ensureInitialized() {
             runOnEdt { getInstance() }
