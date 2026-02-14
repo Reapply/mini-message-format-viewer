@@ -23,6 +23,7 @@ import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.Key
 import com.intellij.util.Alarm
+import me.inspect.minimessageformatviewer.i18n.MiniMessageI18n
 import me.inspect.minimessageformatviewer.settings.MiniMessageSettings
 import java.awt.event.MouseEvent
 import java.awt.datatransfer.StringSelection
@@ -66,7 +67,7 @@ class MiniMessageViewModeController : Disposable {
         editor?.let {
             HintManager.getInstance().showInformationHint(
                 it,
-                if (enabled) "MiniMessage VIEW mode" else "MiniMessage EDIT mode"
+                MiniMessageI18n.hintViewMode(enabled)
             )
         }
 
@@ -191,15 +192,15 @@ class MiniMessageViewModeController : Disposable {
     }
 
     private fun buildClickHintText(event: ClickEventInfo): String {
-        val type = event.action.ifBlank { "unknown" }
-        val payload = event.payload.ifBlank { "(empty)" }.replace("\n", "\\n")
-        return "CLICK TYPE: $type | $payload"
+        val type = event.action.ifBlank { MiniMessageI18n.clickUnknownType() }
+        val payload = event.payload.ifBlank { MiniMessageI18n.clickEmptyPayload() }.replace("\n", "\\n")
+        return MiniMessageI18n.clickTypeLabel(type, payload)
     }
 
     private fun handleClickAction(editor: Editor, event: ClickEventInfo): ClickActionOutcome {
         val settings = MiniMessageSettings.getInstance()
         if (!settings.enableRealClickActions) {
-            return ClickActionOutcome(NotificationType.INFORMATION, "Preview only (real action disabled)")
+            return ClickActionOutcome(NotificationType.INFORMATION, MiniMessageI18n.clickPreviewOnly())
         }
 
         return when (event.action) {
@@ -208,39 +209,39 @@ class MiniMessageViewModeController : Disposable {
             "suggest_command" -> handleSuggestCommand(editor, event, settings)
             "run_command" -> ClickActionOutcome(
                 NotificationType.WARNING,
-                "run_command is not executable in IDE context"
+                MiniMessageI18n.clickRunCommandUnsupported()
             )
 
             else -> ClickActionOutcome(
                 NotificationType.WARNING,
-                "Unsupported action: ${event.action}"
+                MiniMessageI18n.clickUnsupportedAction(event.action)
             )
         }
     }
 
     private fun handleOpenUrl(event: ClickEventInfo, settings: MiniMessageSettings): ClickActionOutcome {
         if (!settings.enableOpenUrlClickAction) {
-            return ClickActionOutcome(NotificationType.WARNING, "open_url action is disabled in settings")
+            return ClickActionOutcome(NotificationType.WARNING, MiniMessageI18n.clickActionDisabled("open_url"))
         }
         if (event.payload.isBlank()) {
-            return ClickActionOutcome(NotificationType.WARNING, "open_url payload is empty")
+            return ClickActionOutcome(NotificationType.WARNING, MiniMessageI18n.clickPayloadEmpty("open_url"))
         }
 
         return runCatching {
             BrowserUtil.browse(event.payload)
-            ClickActionOutcome(NotificationType.INFORMATION, "Opened URL")
+            ClickActionOutcome(NotificationType.INFORMATION, MiniMessageI18n.clickOpenedUrl())
         }.getOrElse { error ->
-            ClickActionOutcome(NotificationType.ERROR, "Failed to open URL: ${error.message.orEmpty()}")
+            ClickActionOutcome(NotificationType.ERROR, MiniMessageI18n.clickFailedOpenUrl(error.message.orEmpty()))
         }
     }
 
     private fun handleCopy(event: ClickEventInfo, settings: MiniMessageSettings): ClickActionOutcome {
         if (!settings.enableCopyToClipboardClickAction) {
-            return ClickActionOutcome(NotificationType.WARNING, "copy_to_clipboard action is disabled in settings")
+            return ClickActionOutcome(NotificationType.WARNING, MiniMessageI18n.clickActionDisabled("copy_to_clipboard"))
         }
 
         CopyPasteManager.getInstance().setContents(StringSelection(event.payload))
-        return ClickActionOutcome(NotificationType.INFORMATION, "Copied payload to clipboard")
+        return ClickActionOutcome(NotificationType.INFORMATION, MiniMessageI18n.clickCopiedPayload())
     }
 
     private fun handleSuggestCommand(
@@ -249,15 +250,15 @@ class MiniMessageViewModeController : Disposable {
         settings: MiniMessageSettings
     ): ClickActionOutcome {
         if (!settings.enableSuggestCommandClickAction) {
-            return ClickActionOutcome(NotificationType.WARNING, "suggest_command action is disabled in settings")
+            return ClickActionOutcome(NotificationType.WARNING, MiniMessageI18n.clickActionDisabled("suggest_command"))
         }
 
         if (event.payload.isBlank()) {
-            return ClickActionOutcome(NotificationType.WARNING, "suggest_command payload is empty")
+            return ClickActionOutcome(NotificationType.WARNING, MiniMessageI18n.clickPayloadEmpty("suggest_command"))
         }
 
         promptSuggestCommandInsertion(editor, event.payload)
-        return ClickActionOutcome(NotificationType.INFORMATION, "suggest_command confirmation opened")
+        return ClickActionOutcome(NotificationType.INFORMATION, MiniMessageI18n.clickSuggestConfirmationOpened())
     }
 
     private fun promptSuggestCommandInsertion(editor: Editor, payload: String) {
@@ -266,17 +267,17 @@ class MiniMessageViewModeController : Disposable {
 
             val answer = Messages.showYesNoDialog(
                 editor.project,
-                "커서 위치에 suggest_command를 삽입할까요?\n$payload",
-                "MiniMessage Suggest Command",
-                "붙여넣기",
-                "취소",
+                MiniMessageI18n.clickSuggestDialogMessage(payload),
+                MiniMessageI18n.clickSuggestDialogTitle(),
+                MiniMessageI18n.clickSuggestDialogConfirm(),
+                MiniMessageI18n.clickSuggestDialogCancel(),
                 null
             )
             if (answer != Messages.YES) {
                 showActionNotification(
                     editor,
                     NotificationType.INFORMATION,
-                    "suggest_command insertion canceled"
+                    MiniMessageI18n.clickSuggestInsertionCanceled()
                 )
                 return@runOnEdt
             }
@@ -289,7 +290,7 @@ class MiniMessageViewModeController : Disposable {
     private fun insertPayloadAtCaret(editor: Editor, payload: String): ClickActionOutcome {
         return runCatching {
             if (editor.isDisposed) {
-                return ClickActionOutcome(NotificationType.WARNING, "Editor is disposed")
+                return ClickActionOutcome(NotificationType.WARNING, MiniMessageI18n.clickEditorDisposed())
             }
             val project = editor.project
             if (project == null) {
@@ -305,16 +306,16 @@ class MiniMessageViewModeController : Disposable {
                     editor.caretModel.moveToOffset(offset + payload.length)
                 }
             }
-            ClickActionOutcome(NotificationType.INFORMATION, "Suggested command inserted at caret")
+            ClickActionOutcome(NotificationType.INFORMATION, MiniMessageI18n.clickSuggestedInserted())
         }.getOrElse { error ->
-            ClickActionOutcome(NotificationType.ERROR, "Failed to insert command: ${error.message.orEmpty()}")
+            ClickActionOutcome(NotificationType.ERROR, MiniMessageI18n.clickSuggestInsertFailed(error.message.orEmpty()))
         }
     }
 
     private fun showActionNotification(editor: Editor, type: NotificationType, message: String) {
         val notification = Notification(
             NOTIFICATION_GROUP_ID,
-            "MiniMessage ClickEvent",
+            MiniMessageI18n.clickNotificationTitle(),
             escapeHtml(message),
             type
         )
@@ -322,7 +323,7 @@ class MiniMessageViewModeController : Disposable {
     }
 
     private fun showClickNotification(editor: Editor, event: ClickEventInfo, outcome: ClickActionOutcome) {
-        val title = "MiniMessage ClickEvent"
+        val title = MiniMessageI18n.clickNotificationTitle()
         val content = "${escapeHtml(buildClickHintText(event))}<br/>${escapeHtml(outcome.message)}"
         val notification = Notification(NOTIFICATION_GROUP_ID, title, "<html>$content</html>", outcome.type)
         Notifications.Bus.notify(notification, editor.project)

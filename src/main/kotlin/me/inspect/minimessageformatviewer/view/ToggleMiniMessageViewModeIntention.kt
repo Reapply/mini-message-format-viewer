@@ -4,9 +4,10 @@ import com.intellij.codeInsight.intention.IntentionAction
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiFile
+import me.inspect.minimessageformatviewer.i18n.MiniMessageI18n
 
 class ToggleMiniMessageViewModeIntention : IntentionAction {
-    override fun getText(): String = "Toggle MiniMessage View/Edit mode"
+    override fun getText(): String = MiniMessageI18n.intentionToggleViewEdit()
 
     override fun getFamilyName(): String = "MiniMessage"
 

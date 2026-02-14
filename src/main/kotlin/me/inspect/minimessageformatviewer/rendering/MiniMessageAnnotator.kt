@@ -8,6 +8,7 @@ import com.intellij.openapi.editor.markup.TextAttributes
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiElement
+import me.inspect.minimessageformatviewer.i18n.MiniMessageI18n
 import me.inspect.minimessageformatviewer.rendering.model.MessageRenderModelFactory
 import me.inspect.minimessageformatviewer.rendering.model.RenderMode
 import me.inspect.minimessageformatviewer.rendering.model.StyledCharacter
@@ -270,12 +271,22 @@ class MiniMessageAnnotator : Annotator {
 
         val details = when (action) {
             "show_text" -> renderHoverTextPayload(payload, settings, renderMode)
-            "show_item" -> if (payload.isBlank()) "ITEM: (empty)" else "ITEM: ${escapeHtml(payload)}"
-            "show_entity" -> if (payload.isBlank()) "ENTITY: (empty)" else "ENTITY: ${escapeHtml(payload)}"
-            else -> if (payload.isBlank()) "(no payload)" else escapeHtml(payload)
+            "show_item" -> if (payload.isBlank()) {
+                MiniMessageI18n.hoverItemDetails(MiniMessageI18n.hoverTextEmpty())
+            } else {
+                MiniMessageI18n.hoverItemDetails(escapeHtml(payload))
+            }
+
+            "show_entity" -> if (payload.isBlank()) {
+                MiniMessageI18n.hoverEntityDetails(MiniMessageI18n.hoverTextEmpty())
+            } else {
+                MiniMessageI18n.hoverEntityDetails(escapeHtml(payload))
+            }
+
+            else -> if (payload.isBlank()) MiniMessageI18n.hoverNoPayload() else escapeHtml(payload)
         }
 
-        return "<html><b>TYPE: ${escapeHtml(action)}</b><br/>$details</html>"
+        return MiniMessageI18n.hoverTypeLabel(action, details)
     }
 
     private fun renderHoverTextPayload(
@@ -283,7 +294,7 @@ class MiniMessageAnnotator : Annotator {
         settings: MiniMessageSettings,
         renderMode: RenderMode
     ): String {
-        if (payload.isBlank()) return "(empty)"
+        if (payload.isBlank()) return MiniMessageI18n.hoverTextEmpty()
 
         val renderOutput = MessageRenderModelFactory
             .create(renderMode)
@@ -294,7 +305,7 @@ class MiniMessageAnnotator : Annotator {
         }
 
         val visibleSourceIndices = collectVisibleSourceIndices(payload)
-        if (visibleSourceIndices.isEmpty()) return "(empty)"
+        if (visibleSourceIndices.isEmpty()) return MiniMessageI18n.hoverTextEmpty()
 
         val html = StringBuilder(payload.length * 2)
         var currentStyle: HoverHtmlStyle? = null
@@ -321,7 +332,7 @@ class MiniMessageAnnotator : Annotator {
             html.append("</span>")
         }
 
-        return html.toString().ifBlank { "(empty)" }
+        return html.toString().ifBlank { MiniMessageI18n.hoverTextEmpty() }
     }
 
     private fun collectVisibleSourceIndices(source: String): List<Int> {

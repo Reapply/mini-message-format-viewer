@@ -6,6 +6,7 @@ import com.intellij.openapi.project.ProjectManager
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.table.JBTable
+import me.inspect.minimessageformatviewer.i18n.MiniMessageI18n
 import me.inspect.minimessageformatviewer.rendering.model.RenderMode
 import java.awt.BorderLayout
 import javax.swing.*
@@ -14,6 +15,7 @@ class MiniMessageSettingsConfigurable : Configurable {
 
     private var colorTableModel: ColorTableModel? = null
     private var table: JBTable? = null
+    private var languageCombo: JComboBox<UiLanguage>? = null
     private var renderModeCombo: JComboBox<RenderMode>? = null
     private var highlightOnlyInViewModeCheckbox: JCheckBox? = null
     private var enableRealClickActionsCheckbox: JCheckBox? = null
@@ -21,7 +23,7 @@ class MiniMessageSettingsConfigurable : Configurable {
     private var enableCopyClickActionCheckbox: JCheckBox? = null
     private var enableSuggestClickActionCheckbox: JCheckBox? = null
 
-    override fun getDisplayName() = "MiniMessage Colors"
+    override fun getDisplayName() = MiniMessageI18n.settingsDisplayName()
 
     override fun createComponent(): JComponent {
         val panel = JPanel(BorderLayout())
@@ -30,10 +32,26 @@ class MiniMessageSettingsConfigurable : Configurable {
         optionsPanel.layout = BoxLayout(optionsPanel, BoxLayout.Y_AXIS)
         val modePanel = JPanel(BorderLayout(8, 0))
 
-        val infoLabel = JBLabel("Customize MiniMessage color mappings. Add your own color names or modify existing ones.")
+        val infoLabel = JBLabel(MiniMessageI18n.settingsInfoLabel())
         infoLabel.border = BorderFactory.createEmptyBorder(0, 0, 6, 0)
 
         val settings = MiniMessageSettings.getInstance()
+        languageCombo = JComboBox(UiLanguage.entries.toTypedArray()).apply {
+            selectedItem = UiLanguage.fromRaw(settings.uiLanguage)
+            renderer = object : DefaultListCellRenderer() {
+                override fun getListCellRendererComponent(
+                    list: JList<*>?,
+                    value: Any?,
+                    index: Int,
+                    isSelected: Boolean,
+                    cellHasFocus: Boolean
+                ): java.awt.Component {
+                    super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
+                    text = (value as? UiLanguage)?.displayName ?: value?.toString().orEmpty()
+                    return this
+                }
+            }
+        }
         renderModeCombo = JComboBox(RenderMode.entries.toTypedArray()).apply {
             selectedItem = RenderMode.fromRaw(settings.renderMode)
             renderer = object : DefaultListCellRenderer() {
@@ -51,30 +69,34 @@ class MiniMessageSettingsConfigurable : Configurable {
             }
         }
 
-        modePanel.add(JBLabel("Rendering Model"), BorderLayout.WEST)
+        val languagePanel = JPanel(BorderLayout(8, 0))
+        languagePanel.add(JBLabel(MiniMessageI18n.settingsLanguageLabel()), BorderLayout.WEST)
+        languagePanel.add(languageCombo, BorderLayout.CENTER)
+
+        modePanel.add(JBLabel(MiniMessageI18n.settingsRenderingModelLabel()), BorderLayout.WEST)
         modePanel.add(renderModeCombo, BorderLayout.CENTER)
 
-        highlightOnlyInViewModeCheckbox = JCheckBox("Show highlighting only in View mode").apply {
+        highlightOnlyInViewModeCheckbox = JCheckBox(MiniMessageI18n.settingsHighlightOnlyViewMode()).apply {
             isSelected = settings.highlightOnlyInViewMode
             alignmentX = 0f
         }
 
-        enableRealClickActionsCheckbox = JCheckBox("Enable real ClickEvent actions").apply {
+        enableRealClickActionsCheckbox = JCheckBox(MiniMessageI18n.settingsEnableRealClickActions()).apply {
             isSelected = settings.enableRealClickActions
             alignmentX = 0f
         }
 
-        enableOpenUrlClickActionCheckbox = JCheckBox("Allow open_url action").apply {
+        enableOpenUrlClickActionCheckbox = JCheckBox(MiniMessageI18n.settingsAllowOpenUrlAction()).apply {
             isSelected = settings.enableOpenUrlClickAction
             alignmentX = 0f
         }
 
-        enableCopyClickActionCheckbox = JCheckBox("Allow copy_to_clipboard action").apply {
+        enableCopyClickActionCheckbox = JCheckBox(MiniMessageI18n.settingsAllowCopyAction()).apply {
             isSelected = settings.enableCopyToClipboardClickAction
             alignmentX = 0f
         }
 
-        enableSuggestClickActionCheckbox = JCheckBox("Allow suggest_command action (insert at caret)").apply {
+        enableSuggestClickActionCheckbox = JCheckBox(MiniMessageI18n.settingsAllowSuggestAction()).apply {
             isSelected = settings.enableSuggestCommandClickAction
             alignmentX = 0f
         }
@@ -88,6 +110,8 @@ class MiniMessageSettingsConfigurable : Configurable {
         enableRealClickActionsCheckbox?.addActionListener { clickActionToggleListener() }
         clickActionToggleListener()
 
+        optionsPanel.add(languagePanel)
+        optionsPanel.add(Box.createVerticalStrut(6))
         optionsPanel.add(modePanel)
         optionsPanel.add(Box.createVerticalStrut(6))
         optionsPanel.add(highlightOnlyInViewModeCheckbox)
@@ -119,6 +143,7 @@ class MiniMessageSettingsConfigurable : Configurable {
     override fun isModified(): Boolean {
         val settings = MiniMessageSettings.getInstance()
         val colorsChanged = colorTableModel?.customColors != settings.customColors
+        val languageChanged = (languageCombo?.selectedItem as? UiLanguage)?.name != settings.uiLanguage
         val modeChanged = (renderModeCombo?.selectedItem as? RenderMode)?.name != settings.renderMode
         val viewModeOnlyChanged = highlightOnlyInViewModeCheckbox?.isSelected != settings.highlightOnlyInViewMode
         val clickMasterChanged = enableRealClickActionsCheckbox?.isSelected != settings.enableRealClickActions
@@ -126,6 +151,7 @@ class MiniMessageSettingsConfigurable : Configurable {
         val clickCopyChanged = enableCopyClickActionCheckbox?.isSelected != settings.enableCopyToClipboardClickAction
         val clickSuggestChanged = enableSuggestClickActionCheckbox?.isSelected != settings.enableSuggestCommandClickAction
         return colorsChanged ||
+                languageChanged ||
                 modeChanged ||
                 viewModeOnlyChanged ||
                 clickMasterChanged ||
@@ -140,6 +166,7 @@ class MiniMessageSettingsConfigurable : Configurable {
             settings.customColors.clear()
             settings.customColors.putAll(it.customColors)
         }
+        settings.uiLanguage = (languageCombo?.selectedItem as? UiLanguage)?.name ?: UiLanguage.ENGLISH.name
         settings.renderMode = (renderModeCombo?.selectedItem as? RenderMode)?.name ?: RenderMode.ADVENTURE_API.name
         settings.highlightOnlyInViewMode = highlightOnlyInViewModeCheckbox?.isSelected ?: true
         settings.enableRealClickActions = enableRealClickActionsCheckbox?.isSelected ?: false
@@ -157,6 +184,7 @@ class MiniMessageSettingsConfigurable : Configurable {
             model.rebuild()
         }
         val settings = MiniMessageSettings.getInstance()
+        languageCombo?.selectedItem = UiLanguage.fromRaw(settings.uiLanguage)
         renderModeCombo?.selectedItem = RenderMode.fromRaw(settings.renderMode)
         highlightOnlyInViewModeCheckbox?.isSelected = settings.highlightOnlyInViewMode
         enableRealClickActionsCheckbox?.isSelected = settings.enableRealClickActions
@@ -172,17 +200,17 @@ class MiniMessageSettingsConfigurable : Configurable {
     private fun createButtonPanel(): JPanel {
         val buttonPanel = JPanel()
 
-        buttonPanel.add(JButton("Add Custom Color").apply {
+        buttonPanel.add(JButton(MiniMessageI18n.settingsAddCustomColor()).apply {
             addActionListener { colorTableModel?.addCustomColor() }
         })
 
-        buttonPanel.add(JButton("Remove Selected").apply {
+        buttonPanel.add(JButton(MiniMessageI18n.settingsRemoveSelected()).apply {
             addActionListener {
                 table?.selectedRow?.let { row -> colorTableModel?.removeColor(row) }
             }
         })
 
-        buttonPanel.add(JButton("Reset Defaults").apply {
+        buttonPanel.add(JButton(MiniMessageI18n.settingsResetDefaults()).apply {
             addActionListener { colorTableModel?.resetDefaults() }
         })
 

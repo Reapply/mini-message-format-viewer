@@ -1,6 +1,7 @@
 package me.inspect.minimessageformatviewer.settings
 
 import com.intellij.ui.ColorUtil
+import me.inspect.minimessageformatviewer.i18n.MiniMessageI18n
 import java.awt.Color
 import javax.swing.table.AbstractTableModel
 
@@ -25,10 +26,10 @@ class ColorTableModel(val customColors: MutableMap<String, String>) : AbstractTa
     override fun getColumnCount() = 4
 
     override fun getColumnName(column: Int) = when (column) {
-        0 -> "Color Name"
-        1 -> "Hex (without #)"
-        2 -> "Preview"
-        3 -> "Type"
+        0 -> MiniMessageI18n.tableColumnColorName()
+        1 -> MiniMessageI18n.tableColumnHex()
+        2 -> MiniMessageI18n.tableColumnPreview()
+        3 -> MiniMessageI18n.tableColumnType()
         else -> ""
     }
 
@@ -38,7 +39,7 @@ class ColorTableModel(val customColors: MutableMap<String, String>) : AbstractTa
             0 -> entry.name
             1 -> entry.hex
             2 -> hexToColor(entry.hex)
-            3 -> if (entry.isDefault) "Default" else "Custom"
+            3 -> if (entry.isDefault) MiniMessageI18n.tableTypeDefault() else MiniMessageI18n.tableTypeCustom()
             else -> ""
         }
     }
