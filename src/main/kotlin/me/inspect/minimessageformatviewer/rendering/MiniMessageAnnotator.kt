@@ -37,6 +37,10 @@ class MiniMessageAnnotator : Annotator {
         val renderOutput = renderModel.render(sourceContent, settings.customColors)
         val contentStartOffset = fileOffset + stringStart
 
+        if (FORCE_UNDERLINE_ALL_FOR_TEST) {
+            underlineAllCharacters(holder, contentStartOffset, sourceContent.length)
+        }
+
         renderOutput.tagHighlights.forEach { highlight ->
             highlightTag(holder, contentStartOffset, highlight)
         }
@@ -69,14 +73,32 @@ class MiniMessageAnnotator : Annotator {
     ) {
         val fontType = buildFontType(styledCharacter.bold, styledCharacter.italic)
         val color = styledCharacter.color?.let(ReadableColorUtil::adjustForEditor)
-        val effectColor = if (styledCharacter.underlined) color ?: DEFAULT_UNDERLINE_COLOR else null
-        val effectType = if (styledCharacter.underlined) EffectType.LINE_UNDERSCORE else null
-        if (color == null && fontType == Font.PLAIN && !styledCharacter.underlined) return
+        val shouldUnderline = styledCharacter.underlined || FORCE_UNDERLINE_ALL_FOR_TEST
+        val effectColor = if (shouldUnderline) color ?: DEFAULT_UNDERLINE_COLOR else null
+        val effectType = if (shouldUnderline) EffectType.LINE_UNDERSCORE else null
+        if (color == null && fontType == Font.PLAIN && !shouldUnderline) return
 
         holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
             .range(TextRange(contentStartOffset + styledCharacter.sourceIndex, contentStartOffset + styledCharacter.sourceIndex + 1))
             .enforcedTextAttributes(TextAttributes(color, null, effectColor, effectType, fontType))
             .create()
+    }
+
+    private fun underlineAllCharacters(holder: AnnotationHolder, contentStartOffset: Int, length: Int) {
+        for (index in 0 until length) {
+            holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
+                .range(TextRange(contentStartOffset + index, contentStartOffset + index + 1))
+                .enforcedTextAttributes(
+                    TextAttributes(
+                        null,
+                        null,
+                        DEFAULT_UNDERLINE_COLOR,
+                        EffectType.LINE_UNDERSCORE,
+                        Font.PLAIN
+                    )
+                )
+                .create()
+        }
     }
 
     private fun buildFontType(bold: Boolean, italic: Boolean): Int {
@@ -110,5 +132,6 @@ class MiniMessageAnnotator : Annotator {
     companion object {
         private val DEFAULT_TAG_COLOR = Color(0x6A, 0x6A, 0x6A)
         private val DEFAULT_UNDERLINE_COLOR = Color(0x5E, 0x5E, 0x5E)
+        private const val FORCE_UNDERLINE_ALL_FOR_TEST = true
     }
 }
