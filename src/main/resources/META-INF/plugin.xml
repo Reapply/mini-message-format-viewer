@@ -8,21 +8,16 @@ Syntax highlighting for MiniMessage color tags in Java and Kotlin code.
 
 <h3>Features</h3>
 <ul>
-  <li>Real-time preview of MiniMessage color tags in string literals</li>
-  <li>Support for named colors (red, blue, white, etc.)</li>
-  <li>Support for hex colors (#FF5533)</li>
-  <li>Full gradient tag support with smooth color transitions</li>
-  <li>Customizable color mappings through settings panel</li>
-  <li>Add your own custom color names</li>
+  <li>Renderer model selection: Adventure API (MiniMessage) or Legacy codes (&amp;/§)</li>
+  <li>Real-time color + bold + italic preview in string literals</li>
+  <li>Support for named and hex colors</li>
+  <li>Customizable custom color mappings through settings panel</li>
 </ul>
 
 <h3>Supported Formats</h3>
 <ul>
-  <li>Named colors: <code>&lt;red&gt;text&lt;/red&gt;</code></li>
-  <li>Hex colors: <code>&lt;#FF5533&gt;text&lt;/#FF5533&gt;</code></li>
-  <li>Verbose format: <code>&lt;color:red&gt;text&lt;/color&gt;</code></li>
-  <li>Gradients: <code>&lt;gradient:#A3ADFF:#00FFF4&gt;text&lt;/gradient&gt;</code></li>
-  <li>Rainbow: <code>&lt;rainbow&gt;text&lt;/rainbow&gt;</code>, <code>&lt;rainbow:!&gt;reversed&lt;/rainbow&gt;</code>, <code>&lt;rainbow:2&gt;text&lt;/rainbow&gt;</code></li>
+  <li>Adventure mode: <code>&lt;red&gt;text&lt;/red&gt;</code>, <code>&lt;#FF5533&gt;text&lt;/#FF5533&gt;</code>, <code>&lt;gradient:#A3ADFF:#00FFF4&gt;text&lt;/gradient&gt;</code></li>
+  <li>Legacy mode: <code>&amp;ctext</code>, <code>§lbold</code>, <code>&amp;#A3ADFFhex</code></li>
 </ul>
 
 <h3>Usage</h3>
@@ -33,6 +28,7 @@ Syntax highlighting for MiniMessage color tags in Java and Kotlin code.
 
     <change-notes><![CDATA[
 <ul>
+  <li>2026-02-14: Added Adventure API/Legacy rendering model split with settings-based factory selection.</li>
   <li>2025-11-22: Added support for <code>&lt;rainbow&gt;</code> tags with reversed and phase arguments.</li>
   <li>2025-11-20: Renamed plugin from <code>Mini-message-format-viewer</code> to <code>MiniMessage-formatter</code>.</li>
 </ul>

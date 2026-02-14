@@ -4,9 +4,11 @@ An IntelliJ IDEA plugin for viewing and highlighting MiniMessage formatted text.
 
 ## Features
 
-- Syntax highlighting for MiniMessage tags
-- Color preview for color codes
-- Gradient support
+- Adventure API model (`MiniMessage`) rendering
+- Legacy model (`&`/`§` color codes) rendering
+- Settings-based renderer switch (Adventure API / Legacy)
+- Color + bold + italic preview in string literals
+- Tag/code highlighting with readable contrast adjustment
 
 ## Installation
 
@@ -17,6 +19,9 @@ An IntelliJ IDEA plugin for viewing and highlighting MiniMessage formatted text.
 ## Usage
 
 Open a file containing MiniMessage formatted text. The plugin will automatically highlight tags and colors.
+
+Renderer model can be changed in:
+`Settings > Tools > MiniMessage Colors > Rendering Model`
 
 ## Development
 
@@ -31,3 +36,7 @@ To run in development:
 ```
 ./gradlew runIde
 ```
+
+## Third-party notices
+
+See `THIRD_PARTY_NOTICES.md` for license notices.
