@@ -28,6 +28,8 @@ class MiniMessageAnnotator : Annotator {
         if (stringStart == -1 || stringEndExclusive == -1 || stringStart >= stringEndExclusive) return
 
         val settings = runCatching { MiniMessageSettings.getInstance() }.getOrNull() ?: return
+        if (!settings.viewModeEnabled) return
+
         val renderMode = RenderMode.fromRaw(settings.renderMode)
         val sourceContent = text.substring(stringStart, stringEndExclusive)
 

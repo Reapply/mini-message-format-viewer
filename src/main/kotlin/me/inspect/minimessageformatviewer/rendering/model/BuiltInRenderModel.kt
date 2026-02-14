@@ -16,7 +16,17 @@ object BuiltInRenderModel : MessageRenderModel {
         val styledCharacters = mutableListOf<StyledCharacter>()
         val tagHighlights = mutableListOf<TagHighlight>()
 
-        var currentState = ColorState(null, null, 0f, false, false, false, false)
+        var currentState = ColorState(
+            color = null,
+            gradientColors = null,
+            gradientPhase = 0f,
+            reversed = false,
+            bold = false,
+            italic = false,
+            underlined = false,
+            strikethrough = false,
+            obfuscated = false
+        )
         var segmentStart = 0
         var i = 0
 
@@ -42,12 +52,32 @@ object BuiltInRenderModel : MessageRenderModel {
             currentState = when (tag.type) {
                 TagType.RESET -> {
                     colorStack.clear()
-                    ColorState(null, null, 0f, false, false, false, false)
+                    ColorState(
+                        color = null,
+                        gradientColors = null,
+                        gradientPhase = 0f,
+                        reversed = false,
+                        bold = false,
+                        italic = false,
+                        underlined = false,
+                        strikethrough = false,
+                        obfuscated = false
+                    )
                 }
 
                 TagType.CLOSE -> {
                     if (colorStack.isNotEmpty()) colorStack.removeLast()
-                    else ColorState(null, null, 0f, false, false, false, false)
+                    else ColorState(
+                        color = null,
+                        gradientColors = null,
+                        gradientPhase = 0f,
+                        reversed = false,
+                        bold = false,
+                        italic = false,
+                        underlined = false,
+                        strikethrough = false,
+                        obfuscated = false
+                    )
                 }
 
                 TagType.OPEN -> {
@@ -58,6 +88,8 @@ object BuiltInRenderModel : MessageRenderModel {
                             tag.gradientColors,
                             tag.gradientPhase,
                             tag.reversed,
+                            currentState.bold,
+                            currentState.italic,
                             currentState.underlined,
                             currentState.strikethrough,
                             currentState.obfuscated
@@ -68,11 +100,15 @@ object BuiltInRenderModel : MessageRenderModel {
                             null,
                             0f,
                             false,
+                            currentState.bold,
+                            currentState.italic,
                             currentState.underlined,
                             currentState.strikethrough,
                             currentState.obfuscated
                         )
 
+                        tag.bold -> currentState.copy(bold = true)
+                        tag.italic -> currentState.copy(italic = true)
                         tag.underlined -> currentState.copy(underlined = true)
                         tag.strikethrough -> currentState.copy(strikethrough = true)
                         tag.obfuscated -> currentState.copy(obfuscated = true)
@@ -113,15 +149,22 @@ object BuiltInRenderModel : MessageRenderModel {
         }
 
         for (index in start until end) {
-            if (state.color == null && !state.underlined && !state.strikethrough && !state.obfuscated) {
+            if (
+                state.color == null &&
+                !state.bold &&
+                !state.italic &&
+                !state.underlined &&
+                !state.strikethrough &&
+                !state.obfuscated
+            ) {
                 continue
             }
             out.add(
                 StyledCharacter(
                     sourceIndex = index,
                     color = state.color,
-                    bold = false,
-                    italic = false,
+                    bold = state.bold,
+                    italic = state.italic,
                     underlined = state.underlined,
                     strikethrough = state.strikethrough,
                     obfuscated = state.obfuscated
@@ -154,8 +197,8 @@ object BuiltInRenderModel : MessageRenderModel {
                 StyledCharacter(
                     sourceIndex = index,
                     color = color,
-                    bold = false,
-                    italic = false,
+                    bold = state.bold,
+                    italic = state.italic,
                     underlined = state.underlined,
                     strikethrough = state.strikethrough,
                     obfuscated = state.obfuscated

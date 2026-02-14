@@ -33,6 +33,12 @@ object TagParser {
             content.lowercase().startsWith("gradient") ->
                 parseGradientTag(content, length, isSelfClosing)
 
+            isBoldTag(content) ->
+                parseBoldTag(length, isSelfClosing)
+
+            isItalicTag(content) ->
+                parseItalicTag(length, isSelfClosing)
+
             isUnderlineTag(content) ->
                 parseUnderlineTag(length, isSelfClosing)
 
@@ -91,6 +97,16 @@ object TagParser {
         return Tag(length, type, underlined = true)
     }
 
+    private fun parseBoldTag(length: Int, isSelfClosing: Boolean): Tag {
+        val type = if (isSelfClosing) TagType.SELF_CLOSING else TagType.OPEN
+        return Tag(length, type, bold = true)
+    }
+
+    private fun parseItalicTag(length: Int, isSelfClosing: Boolean): Tag {
+        val type = if (isSelfClosing) TagType.SELF_CLOSING else TagType.OPEN
+        return Tag(length, type, italic = true)
+    }
+
     private fun parseStrikethroughTag(length: Int, isSelfClosing: Boolean): Tag {
         val type = if (isSelfClosing) TagType.SELF_CLOSING else TagType.OPEN
         return Tag(length, type, strikethrough = true)
@@ -103,6 +119,14 @@ object TagParser {
 
     private fun isUnderlineTag(content: String): Boolean {
         return content.trim().lowercase() in setOf("underlined", "underline", "u")
+    }
+
+    private fun isBoldTag(content: String): Boolean {
+        return content.trim().lowercase() in setOf("bold", "b")
+    }
+
+    private fun isItalicTag(content: String): Boolean {
+        return content.trim().lowercase() in setOf("italic", "i", "em")
     }
 
     private fun isStrikethroughTag(content: String): Boolean {
