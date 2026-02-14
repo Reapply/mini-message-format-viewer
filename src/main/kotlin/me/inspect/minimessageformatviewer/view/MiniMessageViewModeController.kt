@@ -1,6 +1,7 @@
 package me.inspect.minimessageformatviewer.view
 
 import com.intellij.codeInsight.hint.HintManager
+import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.Document
@@ -8,6 +9,7 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
+import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.Key
 import com.intellij.util.Alarm
 import me.inspect.minimessageformatviewer.settings.MiniMessageSettings
@@ -38,6 +40,7 @@ class MiniMessageViewModeController : Disposable {
         val enabled = settings.viewModeEnabled
 
         refreshAllEditors()
+        restartHighlighting()
         editor?.let {
             HintManager.getInstance().showInformationHint(
                 it,
@@ -67,6 +70,12 @@ class MiniMessageViewModeController : Disposable {
             .asSequence()
             .filter { !it.isDisposed }
             .forEach(::refreshEditorFolding)
+    }
+
+    private fun restartHighlighting() {
+        ProjectManager.getInstance().openProjects.forEach { project ->
+            DaemonCodeAnalyzer.getInstance(project).restart()
+        }
     }
 
     private fun refreshEditorFolding(editor: Editor) {
