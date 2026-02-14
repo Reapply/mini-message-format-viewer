@@ -8,6 +8,7 @@ import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.FoldRegion
+import com.intellij.openapi.editor.RangeMarker
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.project.ProjectManager
@@ -17,6 +18,7 @@ import me.inspect.minimessageformatviewer.settings.MiniMessageSettings
 
 class MiniMessageViewModeController : Disposable {
     private val refreshAlarm = Alarm(Alarm.ThreadToUse.SWING_THREAD, this)
+    private val guardedBlocksByDocument = LinkedHashMap<Document, MutableList<RangeMarker>>()
 
     private val documentListener = object : DocumentListener {
         override fun documentChanged(event: DocumentEvent) {
@@ -41,6 +43,9 @@ class MiniMessageViewModeController : Disposable {
         val enabled = settings.viewModeEnabled
 
         refreshAllEditors()
+        if (!enabled) {
+            clearAllGuardedBlocks()
+        }
         restartHighlighting()
         editor?.let {
             HintManager.getInstance().showInformationHint(
@@ -80,9 +85,12 @@ class MiniMessageViewModeController : Disposable {
     }
 
     private fun refreshEditorFolding(editor: Editor) {
+        val document = editor.document
         val foldingModel = editor.foldingModel
         val viewModeEnabled = MiniMessageSettings.getInstance().viewModeEnabled
-        val text = editor.document.charsSequence
+        val text = document.charsSequence
+
+        refreshDocumentGuards(document, text, viewModeEnabled)
 
         foldingModel.runBatchFoldingOperation {
             foldingModel.allFoldRegions
@@ -101,6 +109,46 @@ class MiniMessageViewModeController : Disposable {
                 region.putUserData(VIEW_MODE_TAG_FOLD_KEY, true)
             }
         }
+    }
+
+    private fun refreshDocumentGuards(document: Document, text: CharSequence, viewModeEnabled: Boolean) {
+        ApplicationManager.getApplication().runWriteAction {
+            removeDocumentGuardBlocks(document)
+
+            if (!viewModeEnabled) return@runWriteAction
+
+            val ranges = collectMiniMessageContentRanges(text)
+            if (ranges.isEmpty()) return@runWriteAction
+
+            val guardedBlocks = mutableListOf<RangeMarker>()
+            ranges.forEach { (start, endExclusive) ->
+                if (endExclusive <= start) return@forEach
+                val marker = document.createGuardedBlock(start, endExclusive)
+                marker.putUserData(VIEW_MODE_CONTENT_GUARD_KEY, true)
+                guardedBlocks.add(marker)
+            }
+
+            if (guardedBlocks.isNotEmpty()) {
+                guardedBlocksByDocument[document] = guardedBlocks
+            }
+        }
+    }
+
+    private fun collectMiniMessageContentRanges(text: CharSequence): List<Pair<Int, Int>> {
+        val ranges = mutableListOf<Pair<Int, Int>>()
+
+        STRING_LITERAL_REGEX.findAll(text).forEach { literalMatch ->
+            val contentStart = literalMatch.range.first + 1
+            val contentEndExclusive = literalMatch.range.last
+            if (contentStart >= contentEndExclusive) return@forEach
+
+            val content = text.subSequence(contentStart, contentEndExclusive)
+            if (TAG_REGEX.containsMatchIn(content)) {
+                ranges.add(contentStart to contentEndExclusive)
+            }
+        }
+
+        return ranges
     }
 
     private fun collectTagRanges(text: CharSequence): List<Pair<Int, Int>> {
@@ -134,12 +182,29 @@ class MiniMessageViewModeController : Disposable {
         return TAG_REGEX.matches(foldedText)
     }
 
-    override fun dispose() = Unit
+    private fun removeDocumentGuardBlocks(document: Document) {
+        val blocks = guardedBlocksByDocument.remove(document).orEmpty()
+        blocks.forEach { marker ->
+            if (!marker.isValid) return@forEach
+            runCatching { document.removeGuardedBlock(marker) }
+        }
+    }
+
+    private fun clearAllGuardedBlocks() {
+        ApplicationManager.getApplication().runWriteAction {
+            guardedBlocksByDocument.keys.toList().forEach(::removeDocumentGuardBlocks)
+        }
+    }
+
+    override fun dispose() {
+        clearAllGuardedBlocks()
+    }
 
     companion object {
         private val STRING_LITERAL_REGEX = Regex("\"(?:\\\\.|[^\"\\\\])*\"|'(?:\\\\.|[^'\\\\])*'")
         private val TAG_REGEX = Regex("<[^<>\\n]+>")
         private val VIEW_MODE_TAG_FOLD_KEY = Key.create<Boolean>("mini.message.viewer.view.mode.tag.fold")
+        private val VIEW_MODE_CONTENT_GUARD_KEY = Key.create<Boolean>("mini.message.viewer.view.mode.content.guard")
 
         fun ensureInitialized() {
             runOnEdt { getInstance() }
