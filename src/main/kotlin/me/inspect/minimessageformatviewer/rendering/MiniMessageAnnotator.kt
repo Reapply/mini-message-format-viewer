@@ -54,7 +54,7 @@ class MiniMessageAnnotator : Annotator {
         renderOutput.styledCharacters.forEach { styled ->
             highlightStyledCharacter(holder, contentStartOffset, styled)
         }
-        applyHoverEventTooltips(holder, contentStartOffset, sourceContent)
+        applyHoverEventTooltips(holder, contentStartOffset, sourceContent, settings, renderMode)
     }
 
     private fun shouldAnnotate(mode: RenderMode, source: String): Boolean {
@@ -176,9 +176,15 @@ class MiniMessageAnnotator : Annotator {
         return type
     }
 
-    private fun applyHoverEventTooltips(holder: AnnotationHolder, contentStartOffset: Int, sourceContent: String) {
+    private fun applyHoverEventTooltips(
+        holder: AnnotationHolder,
+        contentStartOffset: Int,
+        sourceContent: String,
+        settings: MiniMessageSettings,
+        renderMode: RenderMode
+    ) {
         val emittedKeys = getOrCreateHoverTooltipSessionKeys(holder)
-        collectHoverEventRanges(sourceContent).forEach { range ->
+        collectHoverEventRanges(sourceContent, settings, renderMode).forEach { range ->
             if (range.end <= range.start) return@forEach
             val absoluteStart = contentStartOffset + range.start
             val absoluteEnd = contentStartOffset + range.end
@@ -202,7 +208,11 @@ class MiniMessageAnnotator : Annotator {
         return created
     }
 
-    private fun collectHoverEventRanges(source: String): List<HoverTooltipRange> {
+    private fun collectHoverEventRanges(
+        source: String,
+        settings: MiniMessageSettings,
+        renderMode: RenderMode
+    ): List<HoverTooltipRange> {
         data class HoverOpen(val contentStart: Int, val tooltip: String)
 
         val opens = ArrayDeque<HoverOpen>()
@@ -215,7 +225,7 @@ class MiniMessageAnnotator : Annotator {
                 continue
             }
 
-            val tagEnd = source.indexOf('>', index + 1)
+            val tagEnd = findTagEnd(source, index + 1, source.length)
             if (tagEnd == -1) {
                 index++
                 continue
@@ -231,7 +241,7 @@ class MiniMessageAnnotator : Annotator {
                 continue
             }
 
-            parseHoverTooltip(tagContent)?.let { tooltip ->
+            parseHoverTooltip(tagContent, settings, renderMode)?.let { tooltip ->
                 opens.addLast(HoverOpen(tagEnd + 1, tooltip))
             }
             index = tagEnd + 1
@@ -240,7 +250,11 @@ class MiniMessageAnnotator : Annotator {
         return ranges
     }
 
-    private fun parseHoverTooltip(tagContent: String): String? {
+    private fun parseHoverTooltip(
+        tagContent: String,
+        settings: MiniMessageSettings,
+        renderMode: RenderMode
+    ): String? {
         val lower = tagContent.lowercase()
         if (!lower.startsWith("hover:")) return null
 
@@ -252,16 +266,137 @@ class MiniMessageAnnotator : Annotator {
         if (action.isEmpty()) return null
 
         val rawPayload = if (actionEnd < body.length) body.substring(actionEnd + 1).trim() else ""
-        val payload = stripWrappingQuotes(rawPayload)
+        val payload = normalizeHoverPayload(stripWrappingQuotes(rawPayload))
 
         val details = when (action) {
-            "show_text" -> if (payload.isBlank()) "(empty)" else escapeHtml(payload)
+            "show_text" -> renderHoverTextPayload(payload, settings, renderMode)
             "show_item" -> if (payload.isBlank()) "ITEM: (empty)" else "ITEM: ${escapeHtml(payload)}"
             "show_entity" -> if (payload.isBlank()) "ENTITY: (empty)" else "ENTITY: ${escapeHtml(payload)}"
             else -> if (payload.isBlank()) "(no payload)" else escapeHtml(payload)
         }
 
         return "<html><b>TYPE: ${escapeHtml(action)}</b><br/>$details</html>"
+    }
+
+    private fun renderHoverTextPayload(
+        payload: String,
+        settings: MiniMessageSettings,
+        renderMode: RenderMode
+    ): String {
+        if (payload.isBlank()) return "(empty)"
+
+        val renderOutput = MessageRenderModelFactory
+            .create(renderMode)
+            .render(payload, settings.customColors)
+        val styleBySourceIndex = HashMap<Int, StyledCharacter>(renderOutput.styledCharacters.size)
+        renderOutput.styledCharacters.forEach { styled ->
+            styleBySourceIndex[styled.sourceIndex] = styled
+        }
+
+        val visibleSourceIndices = collectVisibleSourceIndices(payload)
+        if (visibleSourceIndices.isEmpty()) return "(empty)"
+
+        val html = StringBuilder(payload.length * 2)
+        var currentStyle: HoverHtmlStyle? = null
+
+        visibleSourceIndices.forEach { sourceIndex ->
+            val style = HoverHtmlStyle.from(styleBySourceIndex[sourceIndex])
+
+            if (style != currentStyle) {
+                if (currentStyle?.isPlain() == false) {
+                    html.append("</span>")
+                }
+                if (!style.isPlain()) {
+                    html.append("<span style=\"")
+                    html.append(style.toCss())
+                    html.append("\">")
+                }
+                currentStyle = style
+            }
+
+            appendEscapedHtmlChar(html, payload[sourceIndex])
+        }
+
+        if (currentStyle?.isPlain() == false) {
+            html.append("</span>")
+        }
+
+        return html.toString().ifBlank { "(empty)" }
+    }
+
+    private fun collectVisibleSourceIndices(source: String): List<Int> {
+        val indices = ArrayList<Int>(source.length)
+        var index = 0
+
+        while (index < source.length) {
+            if (source[index] == '<' && !isEscaped(source, index)) {
+                val tagEnd = findTagEnd(source, index + 1, source.length)
+                if (tagEnd != -1) {
+                    index = tagEnd + 1
+                    continue
+                }
+            }
+
+            indices.add(index)
+            index++
+        }
+
+        return indices
+    }
+
+    private fun appendEscapedHtmlChar(out: StringBuilder, ch: Char) {
+        when (ch) {
+            '<' -> out.append("&lt;")
+            '>' -> out.append("&gt;")
+            '&' -> out.append("&amp;")
+            '"' -> out.append("&quot;")
+            '\'' -> out.append("&#39;")
+            '\n' -> out.append("<br/>")
+            '\r' -> Unit
+            else -> out.append(ch)
+        }
+    }
+
+    private fun findTagEnd(source: String, start: Int, limitExclusive: Int): Int {
+        var cursor = start
+        var quoteChar: Char? = null
+        var nestedDepth = 0
+
+        while (cursor < limitExclusive) {
+            val current = source[cursor]
+            if (quoteChar != null) {
+                if (current == quoteChar && !isEscaped(source, cursor)) {
+                    quoteChar = null
+                }
+                cursor++
+                continue
+            }
+
+            if ((current == '"' || current == '\'') && !isEscaped(source, cursor)) {
+                quoteChar = current
+                cursor++
+                continue
+            }
+
+            if (current == '<' && !isEscaped(source, cursor)) {
+                nestedDepth++
+                cursor++
+                continue
+            }
+
+            if (current == '>') {
+                if (nestedDepth > 0) {
+                    nestedDepth--
+                    cursor++
+                    continue
+                }
+                return cursor
+            }
+
+            cursor++
+        }
+
+        return -1
     }
 
     private fun stripWrappingQuotes(value: String): String {
@@ -271,6 +406,12 @@ class MiniMessageAnnotator : Annotator {
         val isSingleQuoted = first == '\'' && last == '\''
         val isDoubleQuoted = first == '"' && last == '"'
         return if (isSingleQuoted || isDoubleQuoted) value.substring(1, value.length - 1) else value
+    }
+
+    private fun normalizeHoverPayload(payload: String): String {
+        return payload
+            .replace("<newline>", "\n", ignoreCase = true)
+            .replace("\\n", "\n")
     }
 
     private fun escapeHtml(text: String): String {
@@ -334,4 +475,61 @@ class MiniMessageAnnotator : Annotator {
         val end: Int,
         val tooltip: String
     )
+
+    private data class HoverHtmlStyle(
+        val color: Color?,
+        val bold: Boolean,
+        val italic: Boolean,
+        val underlined: Boolean,
+        val strikethrough: Boolean,
+        val obfuscated: Boolean
+    ) {
+        fun isPlain(): Boolean {
+            return color == null &&
+                    !bold &&
+                    !italic &&
+                    !underlined &&
+                    !strikethrough &&
+                    !obfuscated
+        }
+
+        fun toCss(): String {
+            val rules = mutableListOf<String>()
+            color?.let { rules.add("color:${toHex(it)}") }
+            if (bold) rules.add("font-weight:700")
+            if (italic) rules.add("font-style:italic")
+
+            val decorations = mutableListOf<String>()
+            if (underlined) decorations.add("underline")
+            if (strikethrough) decorations.add("line-through")
+            if (decorations.isNotEmpty()) {
+                rules.add("text-decoration:${decorations.joinToString(" ")}")
+            }
+            if (obfuscated) {
+                rules.add("border:1px solid currentColor")
+                rules.add("border-radius:2px")
+                rules.add("padding:0 1px")
+            }
+
+            return rules.joinToString(";")
+        }
+
+        companion object {
+            fun from(styled: StyledCharacter?): HoverHtmlStyle {
+                if (styled == null) return HoverHtmlStyle(null, false, false, false, false, false)
+                return HoverHtmlStyle(
+                    color = styled.color,
+                    bold = styled.bold,
+                    italic = styled.italic,
+                    underlined = styled.underlined,
+                    strikethrough = styled.strikethrough,
+                    obfuscated = styled.obfuscated
+                )
+            }
+
+            private fun toHex(color: Color): String {
+                return String.format("#%02X%02X%02X", color.red, color.green, color.blue)
+            }
+        }
+    }
 }

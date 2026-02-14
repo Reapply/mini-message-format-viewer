@@ -355,8 +355,41 @@ class MiniMessageViewModeController : Disposable {
 
     private fun findTagEnd(text: CharSequence, start: Int, limitExclusive: Int): Int {
         var cursor = start
+        var quoteChar: Char? = null
+        var nestedDepth = 0
+
         while (cursor < limitExclusive) {
-            if (text[cursor] == '>') return cursor
+            val current = text[cursor]
+
+            if (quoteChar != null) {
+                if (current == quoteChar && !isEscaped(text, cursor)) {
+                    quoteChar = null
+                }
+                cursor++
+                continue
+            }
+
+            if ((current == '"' || current == '\'') && !isEscaped(text, cursor)) {
+                quoteChar = current
+                cursor++
+                continue
+            }
+
+            if (current == '<' && !isEscaped(text, cursor)) {
+                nestedDepth++
+                cursor++
+                continue
+            }
+
+            if (current == '>') {
+                if (nestedDepth > 0) {
+                    nestedDepth--
+                    cursor++
+                    continue
+                }
+                return cursor
+            }
+
             cursor++
         }
         return -1
@@ -389,32 +422,62 @@ class MiniMessageViewModeController : Disposable {
             if (!viewModeEnabled) return@runBatchFoldingOperation
 
             collectTagRanges(text).forEach { range ->
-                if (range.second <= range.first) return@forEach
+                if (range.end <= range.start) return@forEach
 
-                val region = foldingModel.addFoldRegion(range.first, range.second, "") ?: return@forEach
+                val region = foldingModel.addFoldRegion(range.start, range.end, range.placeholder) ?: return@forEach
                 region.isExpanded = false
                 region.putUserData(VIEW_MODE_TAG_FOLD_KEY, true)
             }
         }
     }
 
-    private fun collectTagRanges(text: CharSequence): List<Pair<Int, Int>> {
-        val ranges = mutableListOf<Pair<Int, Int>>()
+    private fun collectTagRanges(text: CharSequence): List<TagFoldRange> {
+        val ranges = mutableListOf<TagFoldRange>()
 
         STRING_LITERAL_REGEX.findAll(text).forEach { literalMatch ->
             val contentStart = literalMatch.range.first + 1
             val contentEndExclusive = literalMatch.range.last
             if (contentStart >= contentEndExclusive) return@forEach
 
-            val content = text.subSequence(contentStart, contentEndExclusive)
-            TAG_REGEX.findAll(content).forEach { tagMatch ->
-                val start = contentStart + tagMatch.range.first
-                val endExclusive = contentStart + tagMatch.range.last + 1
-                ranges.add(start to endExclusive)
+            var index = contentStart
+            while (index < contentEndExclusive) {
+                if (text[index] != '<' || isEscaped(text, index)) {
+                    index++
+                    continue
+                }
+
+                val tagEnd = findTagEnd(text, index + 1, contentEndExclusive)
+                if (tagEnd == -1) {
+                    index++
+                    continue
+                }
+
+                val rawTag = text.subSequence(index + 1, tagEnd).toString()
+                ranges.add(
+                    TagFoldRange(
+                        start = index,
+                        end = tagEnd + 1,
+                        placeholder = getTagPlaceholder(rawTag)
+                    )
+                )
+                index = tagEnd + 1
             }
         }
 
         return ranges
+    }
+
+    private fun getTagPlaceholder(rawTag: String): String {
+        val trimmed = rawTag.trim()
+        if (trimmed.startsWith("/")) return ""
+
+        val normalized = trimmed
+            .removeSuffix("/")
+            .trim()
+            .substringBefore(':')
+            .lowercase()
+
+        return if (normalized == "newline" || normalized == "br") "\n" else ""
     }
 
     private fun isViewModeTagFoldRegion(region: FoldRegion, text: CharSequence): Boolean {
@@ -485,5 +548,11 @@ class MiniMessageViewModeController : Disposable {
     private data class ClickActionOutcome(
         val type: NotificationType,
         val message: String
+    )
+
+    private data class TagFoldRange(
+        val start: Int,
+        val end: Int,
+        val placeholder: String
     )
 }
