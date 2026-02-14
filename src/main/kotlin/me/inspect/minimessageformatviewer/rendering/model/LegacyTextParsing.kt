@@ -5,7 +5,8 @@ import java.awt.Color
 data class LegacyStyledCharacter(
     val color: Color?,
     val bold: Boolean,
-    val italic: Boolean
+    val italic: Boolean,
+    val underlined: Boolean
 )
 
 data class LegacySourceMapping(
@@ -121,7 +122,8 @@ object LegacyTextParsing {
         data class StyleState(
             val color: Color? = null,
             val bold: Boolean = false,
-            val italic: Boolean = false
+            val italic: Boolean = false,
+            val underlined: Boolean = false
         )
 
         var style = StyleState()
@@ -138,7 +140,7 @@ object LegacyTextParsing {
                     && serializedLegacy.substring(i + 2, i + 8).all { it.isHexDigit() }
                 ) {
                     val color = parseHex(serializedLegacy.substring(i + 2, i + 8))
-                    style = StyleState(color = color, bold = false, italic = false)
+                    style = StyleState(color = color, bold = false, italic = false, underlined = false)
                     i += 8
                     continue
                 }
@@ -146,14 +148,19 @@ object LegacyTextParsing {
                 val verboseHexLength = verboseHexLength(serializedLegacy, i, '§')
                 if (verboseHexLength > 0) {
                     val color = parseVerboseHexColor(serializedLegacy, i)
-                    style = StyleState(color = color, bold = false, italic = false)
+                    style = StyleState(color = color, bold = false, italic = false, underlined = false)
                     i += verboseHexLength
                     continue
                 }
 
                 when {
                     next in colorCodes -> {
-                        style = StyleState(color = ColorParsing.fromLegacyCode(next), bold = false, italic = false)
+                        style = StyleState(
+                            color = ColorParsing.fromLegacyCode(next),
+                            bold = false,
+                            italic = false,
+                            underlined = false
+                        )
                         i += 2
                         continue
                     }
@@ -166,6 +173,12 @@ object LegacyTextParsing {
 
                     next == 'o' -> {
                         style = style.copy(italic = true)
+                        i += 2
+                        continue
+                    }
+
+                    next == 'n' -> {
+                        style = style.copy(underlined = true)
                         i += 2
                         continue
                     }
@@ -187,7 +200,8 @@ object LegacyTextParsing {
                 LegacyStyledCharacter(
                     color = style.color,
                     bold = style.bold,
-                    italic = style.italic
+                    italic = style.italic,
+                    underlined = style.underlined
                 )
             )
             i++

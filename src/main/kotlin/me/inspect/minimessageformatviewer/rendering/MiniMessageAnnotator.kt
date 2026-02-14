@@ -3,6 +3,7 @@ package me.inspect.minimessageformatviewer.rendering
 import com.intellij.lang.annotation.AnnotationHolder
 import com.intellij.lang.annotation.Annotator
 import com.intellij.lang.annotation.HighlightSeverity
+import com.intellij.openapi.editor.markup.EffectType
 import com.intellij.openapi.editor.markup.TextAttributes
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiElement
@@ -68,11 +69,13 @@ class MiniMessageAnnotator : Annotator {
     ) {
         val fontType = buildFontType(styledCharacter.bold, styledCharacter.italic)
         val color = styledCharacter.color?.let(ReadableColorUtil::adjustForEditor)
-        if (color == null && fontType == Font.PLAIN) return
+        val effectColor = if (styledCharacter.underlined) color ?: DEFAULT_UNDERLINE_COLOR else null
+        val effectType = if (styledCharacter.underlined) EffectType.LINE_UNDERSCORE else null
+        if (color == null && fontType == Font.PLAIN && !styledCharacter.underlined) return
 
         holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
             .range(TextRange(contentStartOffset + styledCharacter.sourceIndex, contentStartOffset + styledCharacter.sourceIndex + 1))
-            .enforcedTextAttributes(TextAttributes(color, null, null, null, fontType))
+            .enforcedTextAttributes(TextAttributes(color, null, effectColor, effectType, fontType))
             .create()
     }
 
@@ -106,5 +109,6 @@ class MiniMessageAnnotator : Annotator {
 
     companion object {
         private val DEFAULT_TAG_COLOR = Color(0x6A, 0x6A, 0x6A)
+        private val DEFAULT_UNDERLINE_COLOR = Color(0x5E, 0x5E, 0x5E)
     }
 }

@@ -6,5 +6,6 @@ data class ColorState(
     val color: Color?,
     val gradientColors: List<Color>?,
     val gradientPhase: Float,
-    val reversed: Boolean = false
+    val reversed: Boolean = false,
+    val underlined: Boolean = false
 )

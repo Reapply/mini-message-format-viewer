@@ -33,6 +33,9 @@ object TagParser {
             content.lowercase().startsWith("gradient") ->
                 parseGradientTag(content, length, isSelfClosing)
 
+            isUnderlineTag(content) ->
+                parseUnderlineTag(length, isSelfClosing)
+
             else ->
                 parseColorTag(content, length, isSelfClosing)
         }
@@ -75,6 +78,15 @@ object TagParser {
         val color = resolveColorFromContent(content) ?: return null
         val type = if (isSelfClosing) TagType.SELF_CLOSING else TagType.OPEN
         return Tag(length, type, color)
+    }
+
+    private fun parseUnderlineTag(length: Int, isSelfClosing: Boolean): Tag {
+        val type = if (isSelfClosing) TagType.SELF_CLOSING else TagType.OPEN
+        return Tag(length, type, underlined = true)
+    }
+
+    private fun isUnderlineTag(content: String): Boolean {
+        return content.trim().lowercase() in setOf("underlined", "underline", "u")
     }
 
     private fun resolveColorFromContent(content: String): Color? {
