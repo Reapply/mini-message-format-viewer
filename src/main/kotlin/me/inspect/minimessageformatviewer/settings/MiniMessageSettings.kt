@@ -17,6 +17,10 @@ class MiniMessageSettings : PersistentStateComponent<MiniMessageSettings> {
     var renderMode: String = RenderMode.ADVENTURE_API.name
     var viewModeEnabled: Boolean = false
     var highlightOnlyInViewMode: Boolean = true
+    var enableRealClickActions: Boolean = false
+    var enableOpenUrlClickAction: Boolean = true
+    var enableCopyToClipboardClickAction: Boolean = true
+    var enableSuggestCommandClickAction: Boolean = true
 
     override fun getState() = this
 

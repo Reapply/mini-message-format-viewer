@@ -16,6 +16,10 @@ class MiniMessageSettingsConfigurable : Configurable {
     private var table: JBTable? = null
     private var renderModeCombo: JComboBox<RenderMode>? = null
     private var highlightOnlyInViewModeCheckbox: JCheckBox? = null
+    private var enableRealClickActionsCheckbox: JCheckBox? = null
+    private var enableOpenUrlClickActionCheckbox: JCheckBox? = null
+    private var enableCopyClickActionCheckbox: JCheckBox? = null
+    private var enableSuggestClickActionCheckbox: JCheckBox? = null
 
     override fun getDisplayName() = "MiniMessage Colors"
 
@@ -55,9 +59,43 @@ class MiniMessageSettingsConfigurable : Configurable {
             alignmentX = 0f
         }
 
+        enableRealClickActionsCheckbox = JCheckBox("Enable real ClickEvent actions").apply {
+            isSelected = settings.enableRealClickActions
+            alignmentX = 0f
+        }
+
+        enableOpenUrlClickActionCheckbox = JCheckBox("Allow open_url action").apply {
+            isSelected = settings.enableOpenUrlClickAction
+            alignmentX = 0f
+        }
+
+        enableCopyClickActionCheckbox = JCheckBox("Allow copy_to_clipboard action").apply {
+            isSelected = settings.enableCopyToClipboardClickAction
+            alignmentX = 0f
+        }
+
+        enableSuggestClickActionCheckbox = JCheckBox("Allow suggest_command action (insert at caret)").apply {
+            isSelected = settings.enableSuggestCommandClickAction
+            alignmentX = 0f
+        }
+
+        val clickActionToggleListener = {
+            val enabled = enableRealClickActionsCheckbox?.isSelected == true
+            enableOpenUrlClickActionCheckbox?.isEnabled = enabled
+            enableCopyClickActionCheckbox?.isEnabled = enabled
+            enableSuggestClickActionCheckbox?.isEnabled = enabled
+        }
+        enableRealClickActionsCheckbox?.addActionListener { clickActionToggleListener() }
+        clickActionToggleListener()
+
         optionsPanel.add(modePanel)
         optionsPanel.add(Box.createVerticalStrut(6))
         optionsPanel.add(highlightOnlyInViewModeCheckbox)
+        optionsPanel.add(Box.createVerticalStrut(6))
+        optionsPanel.add(enableRealClickActionsCheckbox)
+        optionsPanel.add(enableOpenUrlClickActionCheckbox)
+        optionsPanel.add(enableCopyClickActionCheckbox)
+        optionsPanel.add(enableSuggestClickActionCheckbox)
 
         topPanel.add(infoLabel, BorderLayout.NORTH)
         topPanel.add(optionsPanel, BorderLayout.SOUTH)
@@ -83,7 +121,17 @@ class MiniMessageSettingsConfigurable : Configurable {
         val colorsChanged = colorTableModel?.customColors != settings.customColors
         val modeChanged = (renderModeCombo?.selectedItem as? RenderMode)?.name != settings.renderMode
         val viewModeOnlyChanged = highlightOnlyInViewModeCheckbox?.isSelected != settings.highlightOnlyInViewMode
-        return colorsChanged || modeChanged || viewModeOnlyChanged
+        val clickMasterChanged = enableRealClickActionsCheckbox?.isSelected != settings.enableRealClickActions
+        val clickOpenUrlChanged = enableOpenUrlClickActionCheckbox?.isSelected != settings.enableOpenUrlClickAction
+        val clickCopyChanged = enableCopyClickActionCheckbox?.isSelected != settings.enableCopyToClipboardClickAction
+        val clickSuggestChanged = enableSuggestClickActionCheckbox?.isSelected != settings.enableSuggestCommandClickAction
+        return colorsChanged ||
+                modeChanged ||
+                viewModeOnlyChanged ||
+                clickMasterChanged ||
+                clickOpenUrlChanged ||
+                clickCopyChanged ||
+                clickSuggestChanged
     }
 
     override fun apply() {
@@ -94,6 +142,10 @@ class MiniMessageSettingsConfigurable : Configurable {
         }
         settings.renderMode = (renderModeCombo?.selectedItem as? RenderMode)?.name ?: RenderMode.ADVENTURE_API.name
         settings.highlightOnlyInViewMode = highlightOnlyInViewModeCheckbox?.isSelected ?: true
+        settings.enableRealClickActions = enableRealClickActionsCheckbox?.isSelected ?: false
+        settings.enableOpenUrlClickAction = enableOpenUrlClickActionCheckbox?.isSelected ?: true
+        settings.enableCopyToClipboardClickAction = enableCopyClickActionCheckbox?.isSelected ?: true
+        settings.enableSuggestCommandClickAction = enableSuggestClickActionCheckbox?.isSelected ?: true
         restartHighlighting()
     }
 
@@ -107,6 +159,14 @@ class MiniMessageSettingsConfigurable : Configurable {
         val settings = MiniMessageSettings.getInstance()
         renderModeCombo?.selectedItem = RenderMode.fromRaw(settings.renderMode)
         highlightOnlyInViewModeCheckbox?.isSelected = settings.highlightOnlyInViewMode
+        enableRealClickActionsCheckbox?.isSelected = settings.enableRealClickActions
+        enableOpenUrlClickActionCheckbox?.isSelected = settings.enableOpenUrlClickAction
+        enableCopyClickActionCheckbox?.isSelected = settings.enableCopyToClipboardClickAction
+        enableSuggestClickActionCheckbox?.isSelected = settings.enableSuggestCommandClickAction
+        val enabled = settings.enableRealClickActions
+        enableOpenUrlClickActionCheckbox?.isEnabled = enabled
+        enableCopyClickActionCheckbox?.isEnabled = enabled
+        enableSuggestClickActionCheckbox?.isEnabled = enabled
     }
 
     private fun createButtonPanel(): JPanel {
