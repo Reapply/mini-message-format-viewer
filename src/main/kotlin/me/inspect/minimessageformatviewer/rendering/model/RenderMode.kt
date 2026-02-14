@@ -8,7 +8,7 @@ enum class RenderMode(val displayName: String) {
     companion object {
         fun fromRaw(raw: String?): RenderMode {
             if (raw == "LEGACY") return BUILT_IN
-            return entries.firstOrNull { it.name == raw } ?: BUILT_IN
+            return entries.firstOrNull { it.name == raw } ?: ADVENTURE_API
         }
     }
 }

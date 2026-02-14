@@ -7,6 +7,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
+import com.intellij.openapi.editor.FoldRegion
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.project.ProjectManager
@@ -86,7 +87,7 @@ class MiniMessageViewModeController : Disposable {
         foldingModel.runBatchFoldingOperation {
             foldingModel.allFoldRegions
                 .asSequence()
-                .filter { region -> region.getUserData(VIEW_MODE_TAG_FOLD_KEY) == true }
+                .filter { region -> isViewModeTagFoldRegion(region, text) }
                 .toList()
                 .forEach { region -> foldingModel.removeFoldRegion(region) }
 
@@ -119,6 +120,18 @@ class MiniMessageViewModeController : Disposable {
         }
 
         return ranges
+    }
+
+    private fun isViewModeTagFoldRegion(region: FoldRegion, text: CharSequence): Boolean {
+        if (region.getUserData(VIEW_MODE_TAG_FOLD_KEY) == true) return true
+        if (region.placeholderText != "") return false
+
+        val start = region.startOffset
+        val end = region.endOffset
+        if (start < 0 || end > text.length || end <= start) return false
+
+        val foldedText = text.subSequence(start, end).toString()
+        return TAG_REGEX.matches(foldedText)
     }
 
     override fun dispose() = Unit

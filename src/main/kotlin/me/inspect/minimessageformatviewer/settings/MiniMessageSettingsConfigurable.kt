@@ -1,6 +1,8 @@
 package me.inspect.minimessageformatviewer.settings
 
+import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.openapi.options.Configurable
+import com.intellij.openapi.project.ProjectManager
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.table.JBTable
@@ -13,12 +15,15 @@ class MiniMessageSettingsConfigurable : Configurable {
     private var colorTableModel: ColorTableModel? = null
     private var table: JBTable? = null
     private var renderModeCombo: JComboBox<RenderMode>? = null
+    private var highlightOnlyInViewModeCheckbox: JCheckBox? = null
 
     override fun getDisplayName() = "MiniMessage Colors"
 
     override fun createComponent(): JComponent {
         val panel = JPanel(BorderLayout())
         val topPanel = JPanel(BorderLayout(0, 8))
+        val optionsPanel = JPanel()
+        optionsPanel.layout = BoxLayout(optionsPanel, BoxLayout.Y_AXIS)
         val modePanel = JPanel(BorderLayout(8, 0))
 
         val infoLabel = JBLabel("Customize MiniMessage color mappings. Add your own color names or modify existing ones.")
@@ -45,8 +50,17 @@ class MiniMessageSettingsConfigurable : Configurable {
         modePanel.add(JBLabel("Rendering Model"), BorderLayout.WEST)
         modePanel.add(renderModeCombo, BorderLayout.CENTER)
 
+        highlightOnlyInViewModeCheckbox = JCheckBox("Show highlighting only in View mode").apply {
+            isSelected = settings.highlightOnlyInViewMode
+            alignmentX = 0f
+        }
+
+        optionsPanel.add(modePanel)
+        optionsPanel.add(Box.createVerticalStrut(6))
+        optionsPanel.add(highlightOnlyInViewModeCheckbox)
+
         topPanel.add(infoLabel, BorderLayout.NORTH)
-        topPanel.add(modePanel, BorderLayout.SOUTH)
+        topPanel.add(optionsPanel, BorderLayout.SOUTH)
         topPanel.border = BorderFactory.createEmptyBorder(0, 0, 10, 0)
 
         panel.add(topPanel, BorderLayout.NORTH)
@@ -68,7 +82,8 @@ class MiniMessageSettingsConfigurable : Configurable {
         val settings = MiniMessageSettings.getInstance()
         val colorsChanged = colorTableModel?.customColors != settings.customColors
         val modeChanged = (renderModeCombo?.selectedItem as? RenderMode)?.name != settings.renderMode
-        return colorsChanged || modeChanged
+        val viewModeOnlyChanged = highlightOnlyInViewModeCheckbox?.isSelected != settings.highlightOnlyInViewMode
+        return colorsChanged || modeChanged || viewModeOnlyChanged
     }
 
     override fun apply() {
@@ -77,7 +92,9 @@ class MiniMessageSettingsConfigurable : Configurable {
             settings.customColors.clear()
             settings.customColors.putAll(it.customColors)
         }
-        settings.renderMode = (renderModeCombo?.selectedItem as? RenderMode)?.name ?: RenderMode.BUILT_IN.name
+        settings.renderMode = (renderModeCombo?.selectedItem as? RenderMode)?.name ?: RenderMode.ADVENTURE_API.name
+        settings.highlightOnlyInViewMode = highlightOnlyInViewModeCheckbox?.isSelected ?: true
+        restartHighlighting()
     }
 
     override fun reset() {
@@ -87,7 +104,9 @@ class MiniMessageSettingsConfigurable : Configurable {
             model.customColors.putAll(settings.customColors)
             model.rebuild()
         }
-        renderModeCombo?.selectedItem = RenderMode.fromRaw(MiniMessageSettings.getInstance().renderMode)
+        val settings = MiniMessageSettings.getInstance()
+        renderModeCombo?.selectedItem = RenderMode.fromRaw(settings.renderMode)
+        highlightOnlyInViewModeCheckbox?.isSelected = settings.highlightOnlyInViewMode
     }
 
     private fun createButtonPanel(): JPanel {
@@ -108,5 +127,11 @@ class MiniMessageSettingsConfigurable : Configurable {
         })
 
         return buttonPanel
+    }
+
+    private fun restartHighlighting() {
+        ProjectManager.getInstance().openProjects.forEach { project ->
+            DaemonCodeAnalyzer.getInstance(project).restart()
+        }
     }
 }

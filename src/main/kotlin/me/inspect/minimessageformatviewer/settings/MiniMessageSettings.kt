@@ -14,8 +14,9 @@ import me.inspect.minimessageformatviewer.rendering.model.RenderMode
 class MiniMessageSettings : PersistentStateComponent<MiniMessageSettings> {
 
     var customColors: MutableMap<String, String> = mutableMapOf()
-    var renderMode: String = RenderMode.BUILT_IN.name
+    var renderMode: String = RenderMode.ADVENTURE_API.name
     var viewModeEnabled: Boolean = false
+    var highlightOnlyInViewMode: Boolean = true
 
     override fun getState() = this
 
