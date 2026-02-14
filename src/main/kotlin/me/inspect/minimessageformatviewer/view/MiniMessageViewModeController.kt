@@ -9,12 +9,16 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.FoldRegion
 import com.intellij.openapi.editor.RangeMarker
+import com.intellij.openapi.editor.event.EditorMouseEvent
+import com.intellij.openapi.editor.event.EditorMouseEventArea
+import com.intellij.openapi.editor.event.EditorMouseMotionListener
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.Key
 import com.intellij.util.Alarm
 import me.inspect.minimessageformatviewer.settings.MiniMessageSettings
+import java.awt.Cursor
 
 class MiniMessageViewModeController : Disposable {
     private val refreshAlarm = Alarm(Alarm.ThreadToUse.SWING_THREAD, this)
@@ -27,9 +31,20 @@ class MiniMessageViewModeController : Disposable {
         }
     }
 
+    private val mouseMotionListener = object : EditorMouseMotionListener {
+        override fun mouseMoved(event: EditorMouseEvent) {
+            updateCursorForEvent(event)
+        }
+
+        override fun mouseDragged(event: EditorMouseEvent) {
+            updateCursorForEvent(event)
+        }
+    }
+
     init {
         runOnEdt {
             EditorFactory.getInstance().eventMulticaster.addDocumentListener(documentListener, this)
+            EditorFactory.getInstance().eventMulticaster.addEditorMouseMotionListener(mouseMotionListener, this)
 
             if (MiniMessageSettings.getInstance().viewModeEnabled) {
                 refreshAllEditors()
@@ -45,6 +60,7 @@ class MiniMessageViewModeController : Disposable {
         refreshAllEditors()
         if (!enabled) {
             clearAllGuardedBlocks()
+            resetAllEditorCursors()
         }
         restartHighlighting()
         editor?.let {
@@ -69,6 +85,32 @@ class MiniMessageViewModeController : Disposable {
             },
             120
         )
+    }
+
+    private fun updateCursorForEvent(event: EditorMouseEvent) {
+        val editor = event.editor
+        if (editor.isDisposed) return
+
+        val cursorType = when {
+            !MiniMessageSettings.getInstance().viewModeEnabled -> Cursor.TEXT_CURSOR
+            event.area != EditorMouseEventArea.EDITING_AREA -> Cursor.TEXT_CURSOR
+            isOffsetGuarded(editor, event) -> Cursor.DEFAULT_CURSOR
+            else -> Cursor.TEXT_CURSOR
+        }
+
+        val component = editor.contentComponent
+        if (component.cursor?.type != cursorType) {
+            component.cursor = Cursor.getPredefinedCursor(cursorType)
+        }
+    }
+
+    private fun isOffsetGuarded(editor: Editor, event: EditorMouseEvent): Boolean {
+        val point = event.mouseEvent.point
+        val offset = editor.logicalPositionToOffset(editor.xyToLogicalPosition(point))
+        val guarded = guardedBlocksByDocument[editor.document].orEmpty()
+        return guarded.any { marker ->
+            marker.isValid && offset in marker.startOffset until marker.endOffset
+        }
     }
 
     private fun refreshAllEditors() {
@@ -196,8 +238,16 @@ class MiniMessageViewModeController : Disposable {
         }
     }
 
+    private fun resetAllEditorCursors() {
+        EditorFactory.getInstance().allEditors
+            .asSequence()
+            .filter { !it.isDisposed }
+            .forEach { editor -> editor.contentComponent.cursor = Cursor.getPredefinedCursor(Cursor.TEXT_CURSOR) }
+    }
+
     override fun dispose() {
         clearAllGuardedBlocks()
+        resetAllEditorCursors()
     }
 
     companion object {
