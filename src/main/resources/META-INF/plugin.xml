@@ -52,5 +52,6 @@ Syntax highlighting for MiniMessage color tags in Java and Kotlin code.
                 instance="me.inspect.minimessageformatviewer.settings.MiniMessageSettingsConfigurable"
                 id="me.inspect.minimessageformatviewer.settings.MiniMessageSettingsConfigurable"
                 displayName="MiniMessage Colors"/>
+        <notificationGroup id="MiniMessage Formatter" displayType="BALLOON" isLogByDefault="false"/>
     </extensions>
 </idea-plugin>
