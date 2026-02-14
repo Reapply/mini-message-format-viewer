@@ -15,7 +15,6 @@ class MiniMessageSettingsConfigurable : Configurable {
 
     private var colorTableModel: ColorTableModel? = null
     private var table: JBTable? = null
-    private var languageCombo: JComboBox<UiLanguage>? = null
     private var renderModeCombo: JComboBox<RenderMode>? = null
     private var highlightOnlyInViewModeCheckbox: JCheckBox? = null
     private var enableRealClickActionsCheckbox: JCheckBox? = null
@@ -36,22 +35,6 @@ class MiniMessageSettingsConfigurable : Configurable {
         infoLabel.border = BorderFactory.createEmptyBorder(0, 0, 6, 0)
 
         val settings = MiniMessageSettings.getInstance()
-        languageCombo = JComboBox(UiLanguage.entries.toTypedArray()).apply {
-            selectedItem = UiLanguage.fromRaw(settings.uiLanguage)
-            renderer = object : DefaultListCellRenderer() {
-                override fun getListCellRendererComponent(
-                    list: JList<*>?,
-                    value: Any?,
-                    index: Int,
-                    isSelected: Boolean,
-                    cellHasFocus: Boolean
-                ): java.awt.Component {
-                    super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
-                    text = (value as? UiLanguage)?.displayName ?: value?.toString().orEmpty()
-                    return this
-                }
-            }
-        }
         renderModeCombo = JComboBox(RenderMode.entries.toTypedArray()).apply {
             selectedItem = RenderMode.fromRaw(settings.renderMode)
             renderer = object : DefaultListCellRenderer() {
@@ -68,10 +51,6 @@ class MiniMessageSettingsConfigurable : Configurable {
                 }
             }
         }
-
-        val languagePanel = JPanel(BorderLayout(8, 0))
-        languagePanel.add(JBLabel(MiniMessageI18n.settingsLanguageLabel()), BorderLayout.WEST)
-        languagePanel.add(languageCombo, BorderLayout.CENTER)
 
         modePanel.add(JBLabel(MiniMessageI18n.settingsRenderingModelLabel()), BorderLayout.WEST)
         modePanel.add(renderModeCombo, BorderLayout.CENTER)
@@ -110,8 +89,6 @@ class MiniMessageSettingsConfigurable : Configurable {
         enableRealClickActionsCheckbox?.addActionListener { clickActionToggleListener() }
         clickActionToggleListener()
 
-        optionsPanel.add(languagePanel)
-        optionsPanel.add(Box.createVerticalStrut(6))
         optionsPanel.add(modePanel)
         optionsPanel.add(Box.createVerticalStrut(6))
         optionsPanel.add(highlightOnlyInViewModeCheckbox)
@@ -143,7 +120,6 @@ class MiniMessageSettingsConfigurable : Configurable {
     override fun isModified(): Boolean {
         val settings = MiniMessageSettings.getInstance()
         val colorsChanged = colorTableModel?.customColors != settings.customColors
-        val languageChanged = (languageCombo?.selectedItem as? UiLanguage)?.name != settings.uiLanguage
         val modeChanged = (renderModeCombo?.selectedItem as? RenderMode)?.name != settings.renderMode
         val viewModeOnlyChanged = highlightOnlyInViewModeCheckbox?.isSelected != settings.highlightOnlyInViewMode
         val clickMasterChanged = enableRealClickActionsCheckbox?.isSelected != settings.enableRealClickActions
@@ -151,7 +127,6 @@ class MiniMessageSettingsConfigurable : Configurable {
         val clickCopyChanged = enableCopyClickActionCheckbox?.isSelected != settings.enableCopyToClipboardClickAction
         val clickSuggestChanged = enableSuggestClickActionCheckbox?.isSelected != settings.enableSuggestCommandClickAction
         return colorsChanged ||
-                languageChanged ||
                 modeChanged ||
                 viewModeOnlyChanged ||
                 clickMasterChanged ||
@@ -166,7 +141,6 @@ class MiniMessageSettingsConfigurable : Configurable {
             settings.customColors.clear()
             settings.customColors.putAll(it.customColors)
         }
-        settings.uiLanguage = (languageCombo?.selectedItem as? UiLanguage)?.name ?: UiLanguage.ENGLISH.name
         settings.renderMode = (renderModeCombo?.selectedItem as? RenderMode)?.name ?: RenderMode.ADVENTURE_API.name
         settings.highlightOnlyInViewMode = highlightOnlyInViewModeCheckbox?.isSelected ?: true
         settings.enableRealClickActions = enableRealClickActionsCheckbox?.isSelected ?: false
@@ -184,7 +158,6 @@ class MiniMessageSettingsConfigurable : Configurable {
             model.rebuild()
         }
         val settings = MiniMessageSettings.getInstance()
-        languageCombo?.selectedItem = UiLanguage.fromRaw(settings.uiLanguage)
         renderModeCombo?.selectedItem = RenderMode.fromRaw(settings.renderMode)
         highlightOnlyInViewModeCheckbox?.isSelected = settings.highlightOnlyInViewMode
         enableRealClickActionsCheckbox?.isSelected = settings.enableRealClickActions
