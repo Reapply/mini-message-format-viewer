@@ -77,7 +77,7 @@ class MiniMessageSettingsConfigurable : Configurable {
             settings.customColors.clear()
             settings.customColors.putAll(it.customColors)
         }
-        settings.renderMode = (renderModeCombo?.selectedItem as? RenderMode)?.name ?: RenderMode.ADVENTURE_API.name
+        settings.renderMode = (renderModeCombo?.selectedItem as? RenderMode)?.name ?: RenderMode.BUILT_IN.name
     }
 
     override fun reset() {

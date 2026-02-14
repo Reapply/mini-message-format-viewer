@@ -1,12 +1,14 @@
 package me.inspect.minimessageformatviewer.rendering.model
 
 enum class RenderMode(val displayName: String) {
+    BUILT_IN("Built-in MiniMessage Parser"),
     ADVENTURE_API("Adventure API (MiniMessage)"),
-    LEGACY("Legacy Codes (&/§)");
+    ;
 
     companion object {
         fun fromRaw(raw: String?): RenderMode {
-            return entries.firstOrNull { it.name == raw } ?: ADVENTURE_API
+            if (raw == "LEGACY") return BUILT_IN
+            return entries.firstOrNull { it.name == raw } ?: BUILT_IN
         }
     }
 }

@@ -46,21 +46,9 @@ class MiniMessageAnnotator : Annotator {
 
     private fun shouldAnnotate(mode: RenderMode, source: String): Boolean {
         return when (mode) {
+            RenderMode.BUILT_IN -> source.contains('<')
             RenderMode.ADVENTURE_API -> source.contains('<')
-            RenderMode.LEGACY -> containsLegacyFormatting(source)
         }
-    }
-
-    private fun containsLegacyFormatting(source: String): Boolean {
-        var i = 0
-        while (i + 1 < source.length) {
-            val prefix = source[i]
-            if ((prefix == '&' || prefix == '§') && source[i + 1].lowercaseChar() in "0123456789abcdefklmnorx#") {
-                return true
-            }
-            i++
-        }
-        return false
     }
 
     private fun highlightTag(holder: AnnotationHolder, contentStartOffset: Int, tag: TagHighlight) {

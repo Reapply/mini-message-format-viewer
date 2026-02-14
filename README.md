@@ -4,9 +4,9 @@ An IntelliJ IDEA plugin for viewing and highlighting MiniMessage formatted text.
 
 ## Features
 
+- Built-in MiniMessage parser model rendering (current behavior)
 - Adventure API model (`MiniMessage`) rendering
-- Legacy model (`&`/`§` color codes) rendering
-- Settings-based renderer switch (Adventure API / Legacy)
+- Settings-based renderer switch (Built-in / Adventure API)
 - Color + bold + italic preview in string literals
 - Tag/code highlighting with readable contrast adjustment
 
