@@ -5,6 +5,7 @@ import com.intellij.openapi.components.PersistentStateComponent
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
 import com.intellij.util.xmlb.XmlSerializerUtil
+import me.inspect.minimessageformatviewer.rendering.model.RenderMode
 
 @State(
     name = "MiniMessageSettings",
@@ -13,6 +14,13 @@ import com.intellij.util.xmlb.XmlSerializerUtil
 class MiniMessageSettings : PersistentStateComponent<MiniMessageSettings> {
 
     var customColors: MutableMap<String, String> = mutableMapOf()
+    var renderMode: String = RenderMode.ADVENTURE_API.name
+    var viewModeEnabled: Boolean = false
+    var highlightOnlyInViewMode: Boolean = true
+    var enableRealClickActions: Boolean = false
+    var enableOpenUrlClickAction: Boolean = true
+    var enableCopyToClipboardClickAction: Boolean = true
+    var enableSuggestCommandClickAction: Boolean = true
 
     override fun getState() = this
 

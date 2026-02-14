@@ -33,6 +33,21 @@ object TagParser {
             content.lowercase().startsWith("gradient") ->
                 parseGradientTag(content, length, isSelfClosing)
 
+            isBoldTag(content) ->
+                parseBoldTag(length, isSelfClosing)
+
+            isItalicTag(content) ->
+                parseItalicTag(length, isSelfClosing)
+
+            isUnderlineTag(content) ->
+                parseUnderlineTag(length, isSelfClosing)
+
+            isStrikethroughTag(content) ->
+                parseStrikethroughTag(length, isSelfClosing)
+
+            isObfuscatedTag(content) ->
+                parseObfuscatedTag(length, isSelfClosing)
+
             else ->
                 parseColorTag(content, length, isSelfClosing)
         }
@@ -75,6 +90,51 @@ object TagParser {
         val color = resolveColorFromContent(content) ?: return null
         val type = if (isSelfClosing) TagType.SELF_CLOSING else TagType.OPEN
         return Tag(length, type, color)
+    }
+
+    private fun parseUnderlineTag(length: Int, isSelfClosing: Boolean): Tag {
+        val type = if (isSelfClosing) TagType.SELF_CLOSING else TagType.OPEN
+        return Tag(length, type, underlined = true)
+    }
+
+    private fun parseBoldTag(length: Int, isSelfClosing: Boolean): Tag {
+        val type = if (isSelfClosing) TagType.SELF_CLOSING else TagType.OPEN
+        return Tag(length, type, bold = true)
+    }
+
+    private fun parseItalicTag(length: Int, isSelfClosing: Boolean): Tag {
+        val type = if (isSelfClosing) TagType.SELF_CLOSING else TagType.OPEN
+        return Tag(length, type, italic = true)
+    }
+
+    private fun parseStrikethroughTag(length: Int, isSelfClosing: Boolean): Tag {
+        val type = if (isSelfClosing) TagType.SELF_CLOSING else TagType.OPEN
+        return Tag(length, type, strikethrough = true)
+    }
+
+    private fun parseObfuscatedTag(length: Int, isSelfClosing: Boolean): Tag {
+        val type = if (isSelfClosing) TagType.SELF_CLOSING else TagType.OPEN
+        return Tag(length, type, obfuscated = true)
+    }
+
+    private fun isUnderlineTag(content: String): Boolean {
+        return content.trim().lowercase() in setOf("underlined", "underline", "u")
+    }
+
+    private fun isBoldTag(content: String): Boolean {
+        return content.trim().lowercase() in setOf("bold", "b")
+    }
+
+    private fun isItalicTag(content: String): Boolean {
+        return content.trim().lowercase() in setOf("italic", "i", "em")
+    }
+
+    private fun isStrikethroughTag(content: String): Boolean {
+        return content.trim().lowercase() in setOf("strikethrough", "strike", "st", "s")
+    }
+
+    private fun isObfuscatedTag(content: String): Boolean {
+        return content.trim().lowercase() in setOf("obfuscated", "obf", "magic")
     }
 
     private fun resolveColorFromContent(content: String): Color? {

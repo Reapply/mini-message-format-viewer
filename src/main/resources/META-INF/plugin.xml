@@ -8,21 +8,16 @@ Syntax highlighting for MiniMessage color tags in Java and Kotlin code.
 
 <h3>Features</h3>
 <ul>
-  <li>Real-time preview of MiniMessage color tags in string literals</li>
-  <li>Support for named colors (red, blue, white, etc.)</li>
-  <li>Support for hex colors (#FF5533)</li>
-  <li>Full gradient tag support with smooth color transitions</li>
-  <li>Customizable color mappings through settings panel</li>
-  <li>Add your own custom color names</li>
+  <li>Renderer model selection: Built-in MiniMessage parser or Adventure API (MiniMessage)</li>
+  <li>Real-time color + bold + italic preview in string literals</li>
+  <li>Support for named and hex colors</li>
+  <li>Customizable custom color mappings through settings panel</li>
 </ul>
 
 <h3>Supported Formats</h3>
 <ul>
-  <li>Named colors: <code>&lt;red&gt;text&lt;/red&gt;</code></li>
-  <li>Hex colors: <code>&lt;#FF5533&gt;text&lt;/#FF5533&gt;</code></li>
-  <li>Verbose format: <code>&lt;color:red&gt;text&lt;/color&gt;</code></li>
-  <li>Gradients: <code>&lt;gradient:#A3ADFF:#00FFF4&gt;text&lt;/gradient&gt;</code></li>
-  <li>Rainbow: <code>&lt;rainbow&gt;text&lt;/rainbow&gt;</code>, <code>&lt;rainbow:!&gt;reversed&lt;/rainbow&gt;</code>, <code>&lt;rainbow:2&gt;text&lt;/rainbow&gt;</code></li>
+  <li>Built-in mode: <code>&lt;red&gt;text&lt;/red&gt;</code>, <code>&lt;#FF5533&gt;text&lt;/#FF5533&gt;</code>, <code>&lt;gradient:#A3ADFF:#00FFF4&gt;text&lt;/gradient&gt;</code></li>
+  <li>Adventure mode: <code>&lt;red&gt;text&lt;/red&gt;</code>, <code>&lt;#FF5533&gt;text&lt;/#FF5533&gt;</code>, <code>&lt;gradient:#A3ADFF:#00FFF4&gt;text&lt;/gradient&gt;</code></li>
 </ul>
 
 <h3>Usage</h3>
@@ -33,6 +28,7 @@ Syntax highlighting for MiniMessage color tags in Java and Kotlin code.
 
     <change-notes><![CDATA[
 <ul>
+  <li>2026-02-14: Added Built-in/Adventure API rendering model split with settings-based factory selection.</li>
   <li>2025-11-22: Added support for <code>&lt;rainbow&gt;</code> tags with reversed and phase arguments.</li>
   <li>2025-11-20: Renamed plugin from <code>Mini-message-format-viewer</code> to <code>MiniMessage-formatter</code>.</li>
 </ul>
@@ -44,10 +40,18 @@ Syntax highlighting for MiniMessage color tags in Java and Kotlin code.
     <extensions defaultExtensionNs="com.intellij">
         <annotator language="" implementationClass="me.inspect.minimessageformatviewer.rendering.MiniMessageAnnotator"/>
         <applicationService serviceImplementation="me.inspect.minimessageformatviewer.settings.MiniMessageSettings"/>
+        <applicationService serviceImplementation="me.inspect.minimessageformatviewer.view.MiniMessageViewModeController"/>
+        <intentionAction>
+            <className>me.inspect.minimessageformatviewer.view.ToggleMiniMessageViewModeIntention</className>
+            <category>MiniMessage</category>
+            <descriptionDirectoryName>ToggleMiniMessageViewModeIntention</descriptionDirectoryName>
+            <skipBeforeAfter>true</skipBeforeAfter>
+        </intentionAction>
         <applicationConfigurable
                 parentId="tools"
                 instance="me.inspect.minimessageformatviewer.settings.MiniMessageSettingsConfigurable"
                 id="me.inspect.minimessageformatviewer.settings.MiniMessageSettingsConfigurable"
                 displayName="MiniMessage Colors"/>
+        <notificationGroup id="MiniMessage Formatter" displayType="BALLOON" isLogByDefault="false"/>
     </extensions>
 </idea-plugin>
