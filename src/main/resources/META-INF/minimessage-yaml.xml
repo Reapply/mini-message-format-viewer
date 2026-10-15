@@ -1,0 +1,5 @@
+<idea-plugin>
+    <extensions defaultExtensionNs="me.inspect.mini-message-format-viewer">
+        <templateExpander implementation="me.inspect.minimessageformatviewer.yaml.YamlTemplateExpander"/>
+    </extensions>
+</idea-plugin>

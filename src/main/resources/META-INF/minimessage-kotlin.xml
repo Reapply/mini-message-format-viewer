@@ -1,0 +1,16 @@
+<idea-plugin>
+    <extensions defaultExtensionNs="me.inspect.mini-message-format-viewer">
+        <templateExpander implementation="me.inspect.minimessageformatviewer.kotlin.KotlinTemplateExpander"/>
+        <paletteProvider implementation="me.inspect.minimessageformatviewer.kotlin.KotlinPaletteProvider"/>
+    </extensions>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <localInspection language="kotlin"
+                         shortName="MiniMessagePlaceholders"
+                         displayName="MiniMessage placeholders don't match the message"
+                         groupName="MiniMessage"
+                         enabledByDefault="true"
+                         level="WARNING"
+                         implementationClass="me.inspect.minimessageformatviewer.kotlin.KotlinPlaceholderInspection"/>
+    </extensions>
+</idea-plugin>

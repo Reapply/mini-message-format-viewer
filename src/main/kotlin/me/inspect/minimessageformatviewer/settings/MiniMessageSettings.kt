@@ -14,6 +14,9 @@ class MiniMessageSettings : PersistentStateComponent<MiniMessageSettings> {
 
     var customColors: MutableMap<String, String> = mutableMapOf()
 
+    /** Whether `&a` style legacy codes are colored; `§a` always is. Can be turned off for code where `&` is plain text. */
+    var legacyAmpersand: Boolean = true
+
     override fun getState() = this
 
     override fun loadState(state: MiniMessageSettings) {

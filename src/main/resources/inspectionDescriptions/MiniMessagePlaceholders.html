@@ -1,0 +1,12 @@
+<html>
+<body>
+Reports calls that send a MiniMessage message with placeholders that don't match it, such as
+<code>Messages.send(player, "&lt;player&gt; earned &lt;amount&gt;", "amount" to x)</code>,
+where nothing fills <code>&lt;player&gt;</code> so it shows in chat as written.
+<p>
+Also reports placeholders the message has no tag for.
+It checks functions that take a <code>String</code> message followed by a
+<code>vararg</code> of <code>Pair&lt;String, String&gt;</code>.
+</p>
+</body>
+</html>

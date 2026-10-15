@@ -27,6 +27,20 @@ object ColorResolver {
         "dark_grey" to Color(0x55, 0x55, 0x55)
     )
 
+    /** Legacy `&a` / `§a` codes and the color each stands for. */
+    val LEGACY_COLORS = mapOf(
+        '0' to "black", '1' to "dark_blue", '2' to "dark_green", '3' to "dark_aqua",
+        '4' to "dark_red", '5' to "dark_purple", '6' to "gold", '7' to "gray",
+        '8' to "dark_gray", '9' to "blue", 'a' to "green", 'b' to "aqua",
+        'c' to "red", 'd' to "light_purple", 'e' to "yellow", 'f' to "white"
+    )
+
+    /** Every color name, the built-in ones and those added in settings. */
+    fun names(): Set<String> {
+        val custom = runCatching { MiniMessageSettings.getInstance().customColors.keys }.getOrNull() ?: emptySet()
+        return DEFAULT_COLORS.keys + custom.map { it.lowercase() }
+    }
+
     fun resolve(input: String): Color? {
         val cleaned = input.trim().removeSurrounding("\"", "\"").removeSurrounding("'", "'")
 

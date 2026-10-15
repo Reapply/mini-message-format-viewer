@@ -2,111 +2,46 @@ package me.inspect.minimessageformatviewer.rendering
 
 import com.intellij.lang.annotation.AnnotationHolder
 import com.intellij.lang.annotation.Annotator
+import com.intellij.lang.annotation.HighlightSeverity
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiElement
-import me.inspect.minimessageformatviewer.parser.TagParser
-import me.inspect.minimessageformatviewer.parser.TagType
-import java.util.LinkedList
 
 class MiniMessageAnnotator : Annotator {
 
     override fun annotate(element: PsiElement, holder: AnnotationHolder) {
-        val text = element.text ?: return
-        if (!text.contains('<')) return
-        if (!isStringLiteral(text)) return
+        val mapped = MiniMessageText.expand(element) ?: return
+        val context = RenderContext.of(element.project)
+        if (!MiniMessageRenderer.mightFormat(mapped.text, context)) return
 
-        val fileOffset = element.textRange.startOffset
-        val stringStart = findStringStart(text)
-        val stringEnd = findStringEnd(text)
+        val rendered = MiniMessageRenderer.render(mapped.text, context)
 
-        if (stringStart == -1 || stringEnd == -1 || stringStart >= stringEnd) return
-
-        val gradientRegions = GradientRegionFinder.find(text, stringStart, stringEnd)
-        val colorStack = LinkedList<ColorState>()
-
-        var currentState = ColorState(null, null, 0f, false)
-        var segmentStart = stringStart
-        var i = stringStart
-
-        while (i < stringEnd) {
-            if (text[i] != '<') {
-                i++
-                continue
+        for (span in rendered.spans) {
+            if (span.style.kind != SpanKind.TEXT && span.style.kind != SpanKind.PLACEHOLDER) continue
+            mapped.fileRanges(span.start, span.end).forEach {
+                TextHighlighter.highlightText(holder, it, span.style.color, span.style.decorations)
             }
-
-            val tag = TagParser.parse(text, i)
-            if (tag == null || i + tag.length > stringEnd) {
-                i++
-                continue
-            }
-
-            if (segmentStart < i) {
-                TextHighlighter.highlightSegment(
-                    holder, fileOffset, segmentStart, i, currentState, gradientRegions
-                )
-            }
-
-            val tagColor = tag.color ?: tag.gradientColors?.firstOrNull()
-            tagColor?.let {
-                TextHighlighter.highlightTag(
-                    holder,
-                    TextRange(fileOffset + i, fileOffset + i + tag.length),
-                    it
-                )
-            }
-
-            currentState = when (tag.type) {
-                TagType.RESET -> {
-                    colorStack.clear()
-                    ColorState(null, null, 0f, false)
-                }
-
-                TagType.CLOSE -> {
-                    if (colorStack.isNotEmpty()) colorStack.removeLast()
-                    else ColorState(null, null, 0f, false)
-                }
-
-                TagType.OPEN -> {
-                    colorStack.addLast(currentState)
-                    when {
-                        tag.isGradient -> ColorState(null, tag.gradientColors, tag.gradientPhase, tag.reversed)
-                        tag.color != null -> ColorState(tag.color, null, 0f, false)
-                        else -> currentState
-                    }
-                }
-
-                TagType.SELF_CLOSING -> currentState
-            }
-
-            i += tag.length
-            segmentStart = i
         }
 
-        if (segmentStart < stringEnd) {
-            TextHighlighter.highlightSegment(
-                holder, fileOffset, segmentStart, stringEnd, currentState, gradientRegions
-            )
+        val coloredInsertions = mutableSetOf<MappedText.Insertion>()
+        for (tag in rendered.tags) {
+            val color = tag.color ?: continue
+            mapped.fileRanges(tag.start, tag.end).forEach { TextHighlighter.highlightTag(holder, it, color) }
+
+            // An inserted `${ACCENT}` takes the color of the first tag it holds.
+            mapped.insertionsIn(tag.start, tag.end)
+                .filter { coloredInsertions.add(it) }
+                .forEach { TextHighlighter.highlightTag(holder, it.source, color) }
         }
-    }
 
-    private fun isStringLiteral(text: String): Boolean {
-        val trimmed = text.trim()
-        return (trimmed.startsWith("\"") && trimmed.endsWith("\"")) ||
-                (trimmed.startsWith("'") && trimmed.endsWith("'"))
-    }
+        // Problems in inserted text are shown where that text is written instead.
+        for (problem in rendered.problems) {
+            val ranges = mapped.fileRanges(problem.start, problem.end)
+            if (ranges.isEmpty()) continue
 
-    private fun findStringStart(text: String): Int {
-        val firstQuote = text.indexOfFirst { it == '"' || it == '\'' }
-        return if (firstQuote != -1) firstQuote + 1 else -1
-    }
-
-    private fun findStringEnd(text: String): Int {
-        val firstQuote = text.indexOfFirst { it == '"' || it == '\'' }
-        if (firstQuote == -1) return -1
-
-        val quoteChar = text[firstQuote]
-        val lastQuote = text.lastIndexOf(quoteChar)
-
-        return if (lastQuote > firstQuote) lastQuote else -1
+            val severity = if (problem.weak) HighlightSeverity.WEAK_WARNING else HighlightSeverity.WARNING
+            holder.newAnnotation(severity, problem.message)
+                .range(TextRange(ranges.first().startOffset, ranges.last().endOffset))
+                .create()
+        }
     }
 }
